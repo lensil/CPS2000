@@ -3,7 +3,7 @@
 import enum
 
 # Keywords
-keywords = {"if", "else"}
+keywords = {"if", "else", "while"}
 
 # Operators
 # Relation Operators
@@ -22,9 +22,9 @@ punctuation = {";", "(", ")", "{", "}"}
 bool_literals = {"true", "false"}
 
 # Token Types
-class Token_Type(enum.Enum):
+class TokenType(enum.Enum):
     IDENTIFIER = 1
-    KEYWORD = 2
+    IF: 2
     REL_OP = 3
     MULT_OP = 4
     ADD_OP = 5
@@ -35,19 +35,21 @@ class Token_Type(enum.Enum):
     BOOL_LITERAL = 10
     WHITESPACE = 11
     EOF = 12
+    ERROR = 13
+
 
 # Token Class
 class Token:
-    def __init__(self, token_type, value):
-        self.token_type = token_type
+    def __init__(self, TokenType, value):
+        self.TokenType = TokenType
         self.value = value
     
 # Lexer Class
 class Lexer:
     def __init__(self):
         self.lexeme_list = ["_", "letter", "digit", "ws", "<", ">", "!", ".", "punctuation", "rel_op", "*", "/", "+", "-", "other", "eq"]
-        self.states_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        self.states_accp = [1, 2, 3, 4, 5, 7, 8, 9, 10]
+        self.states_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        self.states_accp = [1, 2, 3, 4, 5, 7, 8, 9, 10, 11]
 
         self.rows = len(self.states_list)
         self.cols = len(self.lexeme_list)
@@ -91,6 +93,10 @@ class Lexer:
         # Additive Operators
         self.Tx[0][self.lexeme_list.index("+")] = 10
         self.Tx[0][self.lexeme_list.index("-")] = 10
+
+        # Whitespace
+        self.Tx[0][self.lexeme_list.index("ws")] = 11
+        self.Tx[11][self.lexeme_list.index("ws")] = 11
     
     def accepting_states(self, state):
         try:
@@ -99,37 +105,39 @@ class Lexer:
         except ValueError:
             return False
 
-    def get_token_type_by_final_state(self, state, lexeme):
+    def get_TokenType_by_final_state(self, state, lexeme):
         match state:
             case 1:
-                return Token(Token_Type.INT_LITERAL, lexeme)
+                return Token(TokenType.INT_LITERAL, lexeme)
             case 2:
-                return Token(Token_Type.FLOAT_LITERAL, lexeme)
+                return Token(TokenType.FLOAT_LITERAL, lexeme)
             case 3:
                 if lexeme in keywords:
-                    return Token(Token_Type.KEYWORD, lexeme)
+                    return Token(TokenType.KEYWORD, lexeme)
                 elif lexeme in bool_literals:
-                    return Token(Token_Type.BOOL_LITERAL, lexeme)
+                    return Token(TokenType.BOOL_LITERAL, lexeme)
                 elif lexeme in relational_ops:
-                    return Token(Token_Type.REL_OP, lexeme)
+                    return Token(TokenType.REL_OP, lexeme)
                 elif lexeme in multiplicative_ops:
-                    return Token(Token_Type.MULT_OP, lexeme)
+                    return Token(TokenType.MULT_OP, lexeme)
                 else:
-                    return Token(Token_Type.IDENTIFIER, lexeme)
+                    return Token(TokenType.IDENTIFIER, lexeme)
             case 4:
-                return Token(Token_Type.ASSIGNMENT_OP, lexeme)
+                return Token(TokenType.ASSIGNMENT_OP, lexeme)
             case 5:
-                return Token(Token_Type.REL_OP, lexeme)
+                return Token(TokenType.REL_OP, lexeme)
             case 7:
-                return Token(Token_Type.REL_OP, lexeme)
+                return Token(TokenType.REL_OP, lexeme)
             case 8:
-                return Token(Token_Type.PUNCTUATION, lexeme)
+                return Token(TokenType.PUNCTUATION, lexeme)
             case 9:
-                return Token(Token_Type.MULT_OP, lexeme)
+                return Token(TokenType.MULT_OP, lexeme)
             case 10:
-                return Token(Token_Type.ADD_OP, lexeme)
+                return Token(TokenType.ADD_OP, lexeme)
+            case 11:
+                return Token(TokenType.WHITESPACE, lexeme)
             case _:
-                return None
+                return 'default result'
             
     def categorize_character(self, character):
         match character:
@@ -161,6 +169,8 @@ class Lexer:
                 return "+"
             case "-":
                 return "-"
+            case " ":
+                return "ws"
             case _:
                 return "other"
             
@@ -213,12 +223,12 @@ class Lexer:
                 break
 
         if syntax_error:
-            return None
+            return Token(TokenType.ERROR, "Error")
         
         if self.accepting_states(state):
-            return self.get_token_type_by_final_state(state, lexeme), lexeme
+            return self.get_TokenType_by_final_state(state, lexeme), lexeme
         else:
-            return None
+            return Token(TokenType.ERROR, "Lexical error")
         
     def generate_tokens(self, src_program_str):
         tokens_list = []
@@ -226,7 +236,7 @@ class Lexer:
         token, lexeme = self.next_token(src_program_str, src_program_idx)
         tokens_list.append(token)
 
-        while (token != -1):
+        while (token != TokenType.ERROR):
             src_program_idx = src_program_idx + len(lexeme)
             if (not self.end_of_input(src_program_str, src_program_idx)):
                 token, lexeme = self.next_token(src_program_str, src_program_idx)
@@ -236,8 +246,6 @@ class Lexer:
 
         return tokens_list
 
-# Test
-lexer = Lexer()
-tokens = lexer.generate_tokens("if(x>=y){23.678}")
-for token in tokens:
-    print(token.token_type, token.value)
+# To do:
+# - Optimize the code
+# - Error handling
