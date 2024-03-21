@@ -3,7 +3,7 @@
 import enum
 
 # Keywords
-keywords = {"if", "else", "while"}
+keywords = {"if", "else", "while", "let"}
 
 # Operators
 # Relation Operators
@@ -24,7 +24,7 @@ bool_literals = {"true", "false"}
 # Token Types
 class TokenType(enum.Enum):
     IDENTIFIER = 1
-    IF: 2
+    KEYWORD = 2
     REL_OP = 3
     MULT_OP = 4
     ADD_OP = 5
@@ -246,6 +246,12 @@ class Lexer:
 
         return tokens_list
 
+# Test
+    
+lexer = Lexer()
+tokens = lexer.generate_tokens("let x = 5; if x >= 5 { print(x) } else { print(5) }")
+for token in tokens:
+    print(token.TokenType, token.value)
 # To do:
 # - Optimize the code
 # - Error handling
