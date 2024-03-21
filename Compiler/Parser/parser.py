@@ -21,3 +21,9 @@ class Parser:
             self.current_token = self.tokens[self.index] # Get the token at the current index
         else: # Otherwise
             self.current_token = lexer.Token(lexer.TokenType.EOF, "END") # Set the current token to the end token
+
+    # Get the next token
+    def next_token(self):
+        self.next_token_skip_whitespace() # Get the next token and skip whitespace
+        while (self.current_token.type == lexer.TokenType.WHITESPACE): # Check if the current token is whitespace
+            self.next_token_skip_whitespace() # Get the next token and skip whitespace
