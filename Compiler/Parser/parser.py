@@ -12,3 +12,12 @@ class Parser:
         self.next_token = lexer.Token("", lexer.TokenType.WHITESPACE) # Next token
         # Need to add AST program node
         self.ast_root = None # AST root node
+
+    # Get the next token and skip whitespace
+    def next_token_skip_whitespace(self):
+        self.index += 1 # Grab the next token
+        if (self.index < len(self.tokens)): # Check if we have iterated through all tokens
+            # If not, set the current token to the next token
+            self.current_token = self.tokens[self.index] # Get the token at the current index
+        else: # Otherwise
+            self.current_token = lexer.Token(lexer.TokenType.EOF, "END") # Set the current token to the end token
