@@ -84,8 +84,6 @@ class ASTIfNode(ASTStatementNode):
         visitor.inc_tab_count()
         self.condition.accept(visitor)
         self.true_block.accept(visitor)
-        if self.false_block:
-            self.false_block.accept(visitor)
         visitor.dec_tab_count()
 
 class ASTWhileNode(ASTStatementNode):
@@ -117,8 +115,8 @@ class ASTBlockNode(ASTNode):
         visitor.visit_block_node(self)
         visitor.inc_tab_count()
         
-        for st in self.stmts:
-            st.accept(visitor)
+        #for st in self.stmts:
+           # st.accept(visitor)
         
         visitor.dec_tab_count()
 
@@ -189,30 +187,31 @@ class PrintNodesVisitor(ASTVisitor):
     def visit_binary_op_node(self, node):
         self.node_count += 1
         print('\t' * self.tab_count + f"Binary Operation: {node.op}")
-        self.inc_tab_count()
 
+        self.inc_tab_count()  # Correctly manage scope depth
         print('\t' * self.tab_count + "Left:")
-        node.left.accept(self)  # Accept should correctly visit the variable node once
+        node.left.accept(self)
 
         print('\t' * self.tab_count + "Right:")
-        node.right.accept(self)  # Accept should correctly visit the integer node once
-
-        self.dec_tab_count()  # Decrement the tab count after printing children
+        node.right.accept(self)
+        self.dec_tab_count()  # Decrement after all children have been visited
 
     def visit_variable_node(self, var_node):
         self.node_count += 1
         print('\t' * self.tab_count, "Variable => ", var_node.lexeme)
 
     def visit_if_node(self, node):
-        self.node_count += 1
-        print('\t' * self.tab_count, "If Statement =>")
-        print('\t' * (self.tab_count + 1), "Condition:")
+        print('\t' * self.tab_count + "If Statement:")
+        self.inc_tab_count()
+        print('\t' * self.tab_count + "Condition:")
         node.condition.accept(self)
-        print('\t' * (self.tab_count + 1), "True Block:")
+        print('\t' * self.tab_count + "True Block:")
         node.true_block.accept(self)
         if node.false_block is not None:
-            print('\t' * (self.tab_count + 1), "False Block:")
+            print('\t' * self.tab_count + "False Block:")
             node.false_block.accept(self)
+        self.dec_tab_count()
+
 
     def visit_while_node(self, node):
         self.node_count += 1
@@ -223,8 +222,11 @@ class PrintNodesVisitor(ASTVisitor):
         node.block.accept(self)
 
     def visit_block_node(self, block_node):
+        print('\t' * self.tab_count + "Block Start")
         self.node_count += 1
-        print('\t' * self.tab_count, "New Block => ")        
+        for stmt in block_node.stmts:
+            stmt.accept(self)   
+        print('\t' * self.tab_count + "Block End")
 
 
 

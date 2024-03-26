@@ -123,10 +123,13 @@ class Parser:
         return ast.ASTWhileNode(condition, block) # Return the ASTWhileNode
     
     def ParseStatement(self):
+        # ignore curly braces
+        if self.crtToken.TokenType == lex.TokenType.PUNCTUATION and self.crtToken.value == '{':
+            self.NextToken()
+       
         if self.crtToken.TokenType == lex.TokenType.IDENTIFIER:
         # Lookahead to see what the next significant token is.
-            lookaheadToken = self.PeekNextToken()
-        
+            lookaheadToken = self.PeekNextToken()          
             # If the next token is an assignment operator, parse an assignment.
             if lookaheadToken.TokenType == lex.TokenType.ASSIGNMENT_OP:
                 return self.ParseAssignment()
@@ -140,6 +143,9 @@ class Parser:
             raise Exception("Invalid statement")
     
     def PeekNextToken(self):
+        # skip whitespace
+        while self.index + 1 < len(self.tokens) and self.tokens[self.index + 1].TokenType == lex.TokenType.WHITESPACE:
+            self.index += 1
         if self.index + 1 < len(self.tokens):
             return self.tokens[self.index + 1]
         else:
@@ -151,6 +157,10 @@ class Parser:
         block = ast.ASTBlockNode()
 
         while (self.crtToken.TokenType != lex.TokenType.EOF):
+            # ignore curly braces
+            if self.crtToken.TokenType == lex.TokenType.PUNCTUATION and self.crtToken.value == '}':
+                self.NextToken()
+                break
             #print("New Statement - Processing Initial Token:: ", self.crtToken.type, self.crtToken.lexeme)
             s = self.ParseStatement()
             block.add_statement(s)
@@ -172,7 +182,7 @@ class Parser:
 
 
 #parser = Parser("x=23;")
-parser = Parser("     x=   23; y =6;")
+parser = Parser("if (x >= 5){ x=9;};")
 parser.Parse()
 
 print_visitor = ast.PrintNodesVisitor()
