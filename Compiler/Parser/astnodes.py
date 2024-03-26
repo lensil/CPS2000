@@ -4,6 +4,18 @@ class ASTNode: # Base class for all AST nodes
     def __init__(self):
         self.name = "ASTNode"    
 
+class ASTProgramNode(ASTNode): # Program node
+    def __init__(self):
+        self.statements = [] # Array of statements
+
+    def add_statement(self, statement):
+        self.statements.append(statement)
+
+    def accept(self, visitor):
+        visitor.visit_program_node(self)
+        for statement in self.statements:
+            statement.accept(visitor)
+
 # ASTNode for  more specific statements etc
 class ASTStatementNode(ASTNode):
     def __init__(self):
@@ -47,6 +59,36 @@ class ASTAssignmentNode(ASTStatementNode):
         self.expr.accept(visitor)
         visitor.dec_tab_count()
 
+# ASTNode for if statement
+class ASTIfNode(ASTStatementNode):
+    def __init__(self, condition, true_block, false_block):
+        self.name = "ASTIfNode"
+        self.condition = condition
+        self.true_block = true_block
+        self.false_block = false_block
+
+    def accept(self, visitor):
+        visitor.visit_if_node(self)
+        visitor.inc_tab_count()
+        self.condition.accept(visitor)
+        self.true_block.accept(visitor)
+        if self.false_block:
+            self.false_block.accept(visitor)
+        visitor.dec_tab_count()
+
+class ASTWhileNode(ASTStatementNode):
+    def __init__(self, condition, block):
+        self.name = "ASTWhileNode"
+        self.condition = condition
+        self.block = block
+
+    def accept(self, visitor):
+        visitor.visit_while_node(self)
+        visitor.inc_tab_count()
+        self.condition.accept(visitor)
+        self.block.accept(visitor)
+        visitor.dec_tab_count()
+
 # ASTNode for block of statements i.e. { ... }
 class ASTBlockNode(ASTNode):
     def __init__(self):
@@ -84,6 +126,12 @@ class ASTVisitor:
         raise NotImplementedError()
     
     def visit_block_node(self, node):
+        raise NotImplementedError()
+    
+    def visit_if_node(self, node):
+        raise NotImplementedError()
+    
+    def visit_while_node(self, node):
         raise NotImplementedError()
     
     def reset(self):
@@ -127,32 +175,52 @@ class PrintNodesVisitor(ASTVisitor):
         self.node_count += 1
         print('\t' * self.tab_count, "Variable => ", var_node.lexeme)
 
+    def visit_if_node(self, node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "If Statement =>")
+        print('\t' * (self.tab_count + 1), "Condition:")
+        node.condition.accept(self)
+        print('\t' * (self.tab_count + 1), "True Block:")
+        node.true_block.accept(self)
+        if node.false_block is not None:
+            print('\t' * (self.tab_count + 1), "False Block:")
+            node.false_block.accept(self)
+
+    def visit_while_node(self, node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "While Statement =>")
+        print('\t' * (self.tab_count + 1), "Condition:")
+        node.condition.accept(self)
+        print('\t' * (self.tab_count + 1), "Loop Block:")
+        node.block.accept(self)
+
     def visit_block_node(self, block_node):
         self.node_count += 1
         print('\t' * self.tab_count, "New Block => ")        
 
 
+
 #Create a print visitor instance
-print_visitor = PrintNodesVisitor()
+#print_visitor = PrintNodesVisitor()
 
 #assume root node the AST assignment node .... 
 #x=23
 # Should be done parser 
 # This is for debugging
-print("Building AST for assigment statement x=23;")
-assignment_lhs = ASTVariableNode("x")
-assignment_rhs = ASTIntegerNode(23)
-root = ASTAssignmentNode(assignment_lhs, assignment_rhs)
-root.accept(print_visitor)
-print("Node Count => ", print_visitor.node_count)
-print("----")
+#print("Building AST for assigment statement x=23;")
+#assignment_lhs = ASTVariableNode("x")
+#assignment_rhs = ASTIntegerNode(23)
+#root = ASTAssignmentNode(assignment_lhs, assignment_rhs)
+#root.accept(print_visitor)
+#print("Node Count => ", print_visitor.node_count)
+#print("----")
 
 
 #assume root node the AST variable node .... 
 #x123
-print("Building AST for variable x123;")
-root = ASTVariableNode("x123")
-print_visitor.reset()    #reset visitor - in this case node and tab counts
+#print("Building AST for variable x123;")
+#root = ASTVariableNode("x123")
+#print_visitor.reset()    #reset visitor - in this case node and tab counts
 
-root.accept(print_visitor)
-print("Node Count => ", print_visitor.node_count)
+#oot.accept(print_visitor)
+#print("Node Count => ", print_visitor.node_count)
