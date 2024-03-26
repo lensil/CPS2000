@@ -59,6 +59,18 @@ class ASTAssignmentNode(ASTStatementNode):
         self.expr.accept(visitor)
         visitor.dec_tab_count()
 
+class ASTBinaryOpNode(ASTExpressionNode):
+    def __init__(self, left, right, op):
+        self.name = "ASTBinaryOpNode"
+        self.left = left
+        self.right = right
+        self.op = op
+
+    def accept(self, visitor):
+        visitor.visit_binary_op_node(self)
+        visitor.inc_tab_count()
+        visitor.dec_tab_count()
+
 # ASTNode for if statement
 class ASTIfNode(ASTStatementNode):
     def __init__(self, condition, true_block, false_block):
@@ -122,6 +134,9 @@ class ASTVisitor:
     def visit_assignment_node(self, node):
         raise NotImplementedError()
     
+    def visit_binary_op_node(self, node):
+        raise NotImplementedError()
+    
     def visit_variable_node(self, node):
         raise NotImplementedError()
     
@@ -169,7 +184,20 @@ class PrintNodesVisitor(ASTVisitor):
 
     def visit_assignment_node(self, ass_node):
         self.node_count += 1        
-        print('\t' * self.tab_count, "Assignment node => ")        
+        print('\t' * self.tab_count, "Assignment node => ")  
+
+    def visit_binary_op_node(self, node):
+        self.node_count += 1
+        print('\t' * self.tab_count + f"Binary Operation: {node.op}")
+        self.inc_tab_count()
+
+        print('\t' * self.tab_count + "Left:")
+        node.left.accept(self)  # Accept should correctly visit the variable node once
+
+        print('\t' * self.tab_count + "Right:")
+        node.right.accept(self)  # Accept should correctly visit the integer node once
+
+        self.dec_tab_count()  # Decrement the tab count after printing children
 
     def visit_variable_node(self, var_node):
         self.node_count += 1

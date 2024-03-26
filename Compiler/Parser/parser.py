@@ -33,11 +33,33 @@ class Parser:
         #print("Next Token Set to ::: ", self.crtToken.type, self.crtToken.lexeme)                 
 
     def ParseExpression(self):
-        #for now we'll assume an expression can only be an integer
-        if (self.crtToken.TokenType == lex.TokenType.INT_LITERAL):
-            value = self.crtToken.value
+        left = None
+        # First, check if the expression starts with an identifier (variable name)
+        if self.crtToken.TokenType == lex.TokenType.IDENTIFIER:
+            left = ast.ASTVariableNode(self.crtToken.value)
+            self.NextToken()  # Move past the identifier
+        elif self.crtToken.TokenType == lex.TokenType.INT_LITERAL:
+            left = ast.ASTIntegerNode(self.crtToken.value)
             self.NextToken()
-            return ast.ASTIntegerNode(value)
+            return left
+
+        # Then, check for a relational operator
+        if self.crtToken.TokenType == lex.TokenType.REL_OP:
+            op = self.crtToken.value
+            self.NextToken()  # Move past the relational operator
+
+            # After the relational operator, expect an integer literal
+            if self.crtToken.TokenType == lex.TokenType.INT_LITERAL:
+                right = ast.ASTIntegerNode(self.crtToken.value)
+                self.NextToken()  # Move past the integer literal
+
+            # Return a binary operation node representing the entire expression
+                return ast.ASTBinaryOpNode(left, right, op)
+            else:
+                raise Exception("Expected an integer literal after relational operator")
+        else:
+        # If there's no relational operator, the expression might just be an identifier or integer
+            return left  # Or you could directly return an integer node if that's the case
 
     def ParseAssignment(self):
         #Assignment is made up of two main parts; the LHS (the variable) and RHS (the expression)
@@ -58,19 +80,71 @@ class Parser:
         return ast.ASTAssignmentNode(assignment_lhs, assignment_rhs)
     
     def ParseIfStatement(self):
-        self.NextToken() # Consuming the IF token
-        condition = self.ParseExpression() # Parsing the condition
-        false_block = None
-        if self.crtToken.TokenType == lex.TokenType.KEYWORD and self.crtToken.value == "else":
-            self.NextToken()
-            false_block = self.ParseBlock()
-        return ASTIfNode(condition, true_block, false_block)
+        self.NextToken()  # Consumes the 'if'
+        # Check if the next token is a '('
+        if self.crtToken.TokenType != lex.TokenType.PUNCTUATION or self.crtToken.value != '(':
+            raise Exception("Expected '(' after 'if'")
+        self.NextToken()  # Consumes the '('
+
+        condition = self.ParseExpression()  # Parses <Expr>
+
+        # Check if the next token is a ')'
+        if self.crtToken.TokenType != lex.TokenType.PUNCTUATION or self.crtToken.value != ')':
+            print("Current token:", self.crtToken.TokenType, self.crtToken.value)  # Debug print
+            raise Exception("Expected ')' after condition")
+        self.NextToken()  # Consumes the ')'
+
+        true_block = self.ParseBlock()  # Parses <Block>
+
+        false_block = None # Optional <Block>
+
+        # Check if the next token is an 'else'
+        if self.crtToken.TokenType == lex.TokenType.KEYWORD and self.crtToken.value == 'else':
+            self.NextToken()  # Consumes the 'else'
+            false_block = self.ParseBlock()  # Parses the optional <Block>
+
+        # Return the ASTIfNode
+        return ast.ASTIfNode(condition, true_block, false_block)
+    
+    def ParseWhileStatement(self):
+        self.NextToken() # Consumes the 'while'
+        # Check if the next token is a '('
+        if self.crtToken.TokenType != lex.TokenType.PUNCTUATION or self.crtToken.value != '(':
+            raise Exception("Expected '(' after 'while'")
+        self.NextToken()
+        condition = self.ParseExpression()
+
+        # Check if the next token is a ')'
+        if self.crtToken.TokenType != lex.TokenType.PUNCTUATION or self.crtToken.value != ')':
+            raise Exception("Expected ')' after condition")
+        
+        self.NextToken() # Consumes the ')'
+        block = self.ParseBlock() # Parses <Block>
+        return ast.ASTWhileNode(condition, block) # Return the ASTWhileNode
     
     def ParseStatement(self):
-        #At the moment we only have assignment statements .... you'll need to add more for the assignment - branching depends on the token type
-        return self.ParseAssignment()
+        if self.crtToken.TokenType == lex.TokenType.IDENTIFIER:
+        # Lookahead to see what the next significant token is.
+            lookaheadToken = self.PeekNextToken()
+        
+            # If the next token is an assignment operator, parse an assignment.
+            if lookaheadToken.TokenType == lex.TokenType.ASSIGNMENT_OP:
+                return self.ParseAssignment()
+            else:
+                return self.ParseExpression()
+        elif self.crtToken.TokenType == lex.TokenType.KEYWORD and self.crtToken.value == 'if':
+            return self.ParseIfStatement()
+        elif self.crtToken.TokenType == lex.TokenType.KEYWORD and self.crtToken.value == 'while':
+            return self.ParseWhileStatement()
+        else:
+            raise Exception("Invalid statement")
     
-
+    def PeekNextToken(self):
+        if self.index + 1 < len(self.tokens):
+            return self.tokens[self.index + 1]
+        else:
+            return lex.Token("", lex.TokenType.EOF)  # Return an EOF token if there are no more tokens.
+    
     def ParseBlock(self):
         #At the moment we only have assignment statements .... you'll need to add more for the assignment - branching depends on the token type
 
@@ -98,7 +172,7 @@ class Parser:
 
 
 #parser = Parser("x=23;")
-parser = Parser("     x=   23 ; y=  100;  z = 23 ;")
+parser = Parser("     x=   23; y =6;")
 parser.Parse()
 
 print_visitor = ast.PrintNodesVisitor()
