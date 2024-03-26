@@ -1,5 +1,5 @@
 # Parser implementation
-from Lexer import lexer
+from ..Lexer import Lexer
 
 # Parser class
 class Parser:
