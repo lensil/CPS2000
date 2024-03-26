@@ -182,7 +182,7 @@ class Parser:
 
 
 #parser = Parser("x=23;")
-parser = Parser("if (x >= 5){ x=9;};")
+parser = Parser("if (x >= 5){ x=9;} else { y=10;}; z=23;")
 parser.Parse()
 
 print_visitor = ast.PrintNodesVisitor()

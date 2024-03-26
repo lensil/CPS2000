@@ -73,17 +73,40 @@ class ASTBinaryOpNode(ASTExpressionNode):
 
 # ASTNode for if statement
 class ASTIfNode(ASTStatementNode):
-    def __init__(self, condition, true_block, false_block):
-        self.name = "ASTIfNode"
+    def __init__(self, condition, true_block, false_block=None):
+        super().__init__()
         self.condition = condition
         self.true_block = true_block
         self.false_block = false_block
 
     def accept(self, visitor):
-        visitor.visit_if_node(self)
+        print('\t' * visitor.tab_count + "If Statement:")
         visitor.inc_tab_count()
         self.condition.accept(visitor)
-        self.true_block.accept(visitor)
+
+        print('\t' * visitor.tab_count + "True Block:")
+        visitor.inc_tab_count()  # Increase indentation for the block
+        if isinstance(self.true_block, ASTBlockNode):
+            self.true_block.accept(visitor)  # Accept the block with correct indentation
+        else:
+            # If the true block is not explicitly an ASTBlockNode, wrap its acceptance in block start/end markers
+            print('\t' * visitor.tab_count + "Block Start")
+            self.true_block.accept(visitor)
+            print('\t' * visitor.tab_count + "Block End")
+        visitor.dec_tab_count()  # Correctly align with the rest of the structure
+
+        if self.false_block is not None:
+            print('\t' * visitor.tab_count + "False Block:")
+            visitor.inc_tab_count()  # Increase indentation for the block
+            if isinstance(self.false_block, ASTBlockNode):
+                self.false_block.accept(visitor)  # Accept the block with correct indentation
+            else:
+                # If the false block is not explicitly an ASTBlockNode, wrap its acceptance in block start/end markers
+                print('\t' * visitor.tab_count + "Block Start")
+                self.false_block.accept(visitor)
+                print('\t' * visitor.tab_count + "Block End")
+            visitor.dec_tab_count()  # Align with the structure
+
         visitor.dec_tab_count()
 
 class ASTWhileNode(ASTStatementNode):
@@ -111,14 +134,8 @@ class ASTBlockNode(ASTNode):
     def add_statement(self, node):
         self.stmts.append(node)
 
-    def accept(self, visitor):
-        visitor.visit_block_node(self)
-        visitor.inc_tab_count()
-        
-        #for st in self.stmts:
-           # st.accept(visitor)
-        
-        visitor.dec_tab_count()
+    def accept(self, visitor, print_statements=True):
+        visitor.visit_block_node(self, print_statements)
 
 # Visitor pattern
 # Will not be implemented 
@@ -221,11 +238,13 @@ class PrintNodesVisitor(ASTVisitor):
         print('\t' * (self.tab_count + 1), "Loop Block:")
         node.block.accept(self)
 
-    def visit_block_node(self, block_node):
+    def visit_block_node(self, block_node, print_statements=True):
         print('\t' * self.tab_count + "Block Start")
-        self.node_count += 1
-        for stmt in block_node.stmts:
-            stmt.accept(self)   
+        if print_statements:
+            self.inc_tab_count()
+            for stmt in block_node.stmts:
+                stmt.accept(self)  # Pass False if you want to suppress inner statement printing
+            self.dec_tab_count()
         print('\t' * self.tab_count + "Block End")
 
 
