@@ -34,8 +34,9 @@ class TokenType(enum.Enum):
     FLOAT_LITERAL = 9
     BOOL_LITERAL = 10
     WHITESPACE = 11
-    EOF = 12
-    ERROR = 13
+    COMMENT = 12
+    EOF = 13
+    ERROR = 14
 
 
 # Token Class
@@ -47,9 +48,9 @@ class Token:
 # Lexer Class
 class Lexer:
     def __init__(self):
-        self.lexeme_list = ["_", "letter", "digit", "ws", "<", ">", "!", ".", "punctuation", "rel_op", "*", "/", "+", "-", "other", "eq"]
-        self.states_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-        self.states_accp = [1, 2, 3, 4, 5, 7, 8, 9, 10, 11]
+        self.lexeme_list = ["_", "letter", "digit", "ws", "<", ">", "!", ".", "punctuation", "rel_op", "*", "/", "+", "-", "other", "eq", "newline"]
+        self.states_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+        self.states_accp = [1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 17]
 
         self.rows = len(self.states_list)
         self.cols = len(self.lexeme_list)
@@ -88,7 +89,62 @@ class Lexer:
 
         # Multiplicative Operators
         self.Tx[0][self.lexeme_list.index("*")] = 9
-        self.Tx[0][self.lexeme_list.index("/")] = 9
+        self.Tx[0][self.lexeme_list.index("/")] = 12
+
+        # Single line comments
+        self.Tx[12][self.lexeme_list.index("/")] = 13
+        self.Tx[13][self.lexeme_list.index("_")] = 13
+        self.Tx[13][self.lexeme_list.index("letter")] = 13
+        self.Tx[13][self.lexeme_list.index("digit")] = 13
+        self.Tx[13][self.lexeme_list.index("ws")] = 13
+        self.Tx[13][self.lexeme_list.index("punctuation")] = 13
+        self.Tx[13][self.lexeme_list.index("eq")] = 13
+        self.Tx[13][self.lexeme_list.index("<")] = 13
+        self.Tx[13][self.lexeme_list.index(">")] = 13
+        self.Tx[13][self.lexeme_list.index("!")] = 13
+        self.Tx[13][self.lexeme_list.index(".")] = 13
+        self.Tx[13][self.lexeme_list.index("*")] = 13
+        self.Tx[13][self.lexeme_list.index("/")] = 13
+        self.Tx[13][self.lexeme_list.index("+")] = 13
+        self.Tx[13][self.lexeme_list.index("-")] = 13
+        self.Tx[13][self.lexeme_list.index("other")] = 13
+        self.Tx[13][self.lexeme_list.index("newline")] = 14
+
+        # Inline Comments
+        self.Tx[12][self.lexeme_list.index("*")] = 15
+        self.Tx[15][self.lexeme_list.index("_")] = 15
+        self.Tx[15][self.lexeme_list.index("letter")] = 15
+        self.Tx[15][self.lexeme_list.index("digit")] = 15
+        self.Tx[15][self.lexeme_list.index("ws")] = 15
+        self.Tx[15][self.lexeme_list.index("punctuation")] = 15
+        self.Tx[15][self.lexeme_list.index("eq")] = 15
+        self.Tx[15][self.lexeme_list.index("<")] = 15
+        self.Tx[15][self.lexeme_list.index(">")] = 15
+        self.Tx[15][self.lexeme_list.index("!")] = 15
+        self.Tx[15][self.lexeme_list.index(".")] = 15
+        self.Tx[15][self.lexeme_list.index("*")] = 16
+        self.Tx[15][self.lexeme_list.index("/")] = 15
+        self.Tx[15][self.lexeme_list.index("+")] = 15
+        self.Tx[15][self.lexeme_list.index("-")] = 15
+        self.Tx[15][self.lexeme_list.index("other")] = 15
+        self.Tx[15][self.lexeme_list.index("newline")] = 15
+        self.Tx[16][self.lexeme_list.index("_")] = 15
+        self.Tx[16][self.lexeme_list.index("letter")] = 15
+        self.Tx[16][self.lexeme_list.index("digit")] = 15
+        self.Tx[16][self.lexeme_list.index("ws")] = 15
+        self.Tx[16][self.lexeme_list.index("punctuation")] = 15
+        self.Tx[16][self.lexeme_list.index("eq")] = 15
+        self.Tx[16][self.lexeme_list.index("<")] = 15
+        self.Tx[16][self.lexeme_list.index(">")] = 15
+        self.Tx[16][self.lexeme_list.index("!")] = 15
+        self.Tx[16][self.lexeme_list.index(".")] = 15
+        self.Tx[16][self.lexeme_list.index("*")] = 16
+        self.Tx[16][self.lexeme_list.index("/")] = 17
+        self.Tx[16][self.lexeme_list.index("+")] = 15
+        self.Tx[16][self.lexeme_list.index("-")] = 15
+        self.Tx[16][self.lexeme_list.index("other")] = 15
+        self.Tx[16][self.lexeme_list.index("newline")] = 15
+
 
         # Additive Operators
         self.Tx[0][self.lexeme_list.index("+")] = 10
@@ -136,6 +192,14 @@ class Lexer:
                 return Token(TokenType.ADD_OP, lexeme)
             case 11:
                 return Token(TokenType.WHITESPACE, lexeme)
+            case 12:
+                return Token(TokenType.MULT_OP, lexeme)
+            case 13:
+                return Token(TokenType.COMMENT, lexeme)
+            case 14:
+                return Token(TokenType.COMMENT, lexeme)  
+            case 17:
+                return Token(TokenType.COMMENT, lexeme)
             case _:
                 return 'default result'
             
@@ -171,6 +235,8 @@ class Lexer:
                 return "-"
             case " ":
                 return "ws"
+            case "\n":
+                return "newline"
             case _:
                 return "other"
             
@@ -234,24 +300,22 @@ class Lexer:
         tokens_list = []
         src_program_idx = 0
         token, lexeme = self.next_token(src_program_str, src_program_idx)
-        tokens_list.append(token)
 
         while (token != TokenType.ERROR):
+            if token.TokenType not in [TokenType.WHITESPACE, TokenType.COMMENT]:
+                tokens_list.append(token)
             src_program_idx = src_program_idx + len(lexeme)
             if (not self.end_of_input(src_program_str, src_program_idx)):
                 token, lexeme = self.next_token(src_program_str, src_program_idx)
-                tokens_list.append(token)
+                
             else:
                 break
 
         return tokens_list
-
-# Test
     
-#lexer = Lexer()
-#tokens = lexer.generate_tokens("let x = 5; if x >= 5 { print(x) } else { print(5) }")
-#for token in tokens:
-#    print(token.TokenType, token.value)
-# To do:
-# - Optimize the code
-# - Error handling
+# Test
+lexer = Lexer()
+src_program_str = "/*hello */ if (x >= 5){ x=9;} else { y=10;}; z=23;"
+tokens = lexer.generate_tokens(src_program_str)
+for token in tokens:
+    print(token.TokenType, token.value)

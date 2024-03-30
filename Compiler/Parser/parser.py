@@ -3,6 +3,7 @@
 import astnodes as ast
 import lexer as lex
 
+
 class Parser:
     def __init__(self, src_program_str):
         self.name = "PARSEAR"
@@ -15,7 +16,7 @@ class Parser:
         #    print(t.type, t.lexeme)
         self.crtToken = lex.Token("", lex.TokenType.ERROR)
         self.nextToken = lex.Token("", lex.TokenType.ERROR)
-        self.ASTroot = ast.ASTAssignmentNode     #this will need to change once you introduce the AST program node .... that should become the new root node    
+        self.ASTroot = ast.ASTProgramNode()  #this will need to change once you introduce the AST program node .... that should become the new root node    
 
     def NextTokenSkipWS(self):
         self.index += 1   #Grab the next token
@@ -173,16 +174,18 @@ class Parser:
         return block
 
     def ParseProgram(self):                        
-        self.NextToken()  #set crtToken to the first token (skip all WS)
-        b = self.ParseBlock()        
-        return b        
+        self.NextToken()  # Set crtToken to the first token (skip all WS)
+        while self.crtToken.TokenType != lex.TokenType.EOF:
+            statement = self.ParseBlock()
+            self.ASTroot.add_statement(statement)  # Add each statement to the AST program node
+        return self.ASTroot      
 
     def Parse(self):        
         self.ASTroot = self.ParseProgram()
 
 
 #parser = Parser("x=23;")
-parser = Parser("if (x >= 5){ x=9;} else { y=10;}; z=23;")
+parser = Parser("if(x >= 5){ x=9;} else { y=10;}; z=23;")
 parser.Parse()
 
 print_visitor = ast.PrintNodesVisitor()

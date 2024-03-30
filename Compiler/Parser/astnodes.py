@@ -6,6 +6,7 @@ class ASTNode: # Base class for all AST nodes
 
 class ASTProgramNode(ASTNode): # Program node
     def __init__(self):
+        self.name = "ASTProgramNode"
         self.statements = [] # Array of statements
 
     def add_statement(self, statement):
@@ -13,8 +14,6 @@ class ASTProgramNode(ASTNode): # Program node
 
     def accept(self, visitor):
         visitor.visit_program_node(self)
-        for statement in self.statements:
-            statement.accept(visitor)
 
 # ASTNode for  more specific statements etc
 class ASTStatementNode(ASTNode):
@@ -164,6 +163,9 @@ class ASTVisitor:
     def visit_while_node(self, node):
         raise NotImplementedError()
     
+    def visit_program_node(self, node):
+        raise NotImplementedError()
+    
     def reset(self):
         raise NotImplementedError()
     
@@ -180,6 +182,7 @@ class PrintNodesVisitor(ASTVisitor):
         self.name = "Print Tree Visitor"
         self.node_count = 0
         self.tab_count = 0
+        self.is_within_program = False
 
     # Implmentation of the functions
     def reset(self):
@@ -239,14 +242,21 @@ class PrintNodesVisitor(ASTVisitor):
         node.block.accept(self)
 
     def visit_block_node(self, block_node, print_statements=True):
-        print('\t' * self.tab_count + "Block Start")
-        if print_statements:
-            self.inc_tab_count()
-            for stmt in block_node.stmts:
-                stmt.accept(self)  # Pass False if you want to suppress inner statement printing
-            self.dec_tab_count()
-        print('\t' * self.tab_count + "Block End")
+        # Only print "Block Start/End" if we're outside the program node or you explicitly want to show block structure
+        if not self.is_within_program:
+            print("Block Start")
+        for stmt in block_node.stmts:
+            stmt.accept(self)
+        if not self.is_within_program:
+            print("Block End")
 
+    def visit_program_node(self, node):
+        print("Program Start")
+        self.is_within_program = True
+        for stmt in node.statements:
+            stmt.accept(self)
+        self.is_within_program = False
+        print("Program End")
 
 
 #Create a print visitor instance
