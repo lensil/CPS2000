@@ -152,7 +152,9 @@ class Lexer:
 
         # Whitespace
         self.Tx[0][self.lexeme_list.index("ws")] = 11
+        self.Tx[0][self.lexeme_list.index("newline")] = 11
         self.Tx[11][self.lexeme_list.index("ws")] = 11
+        self.Tx[11][self.lexeme_list.index("newline")] = 11
     
     def accepting_states(self, state):
         try:
@@ -315,7 +317,7 @@ class Lexer:
     
 # Test
 lexer = Lexer()
-src_program_str = "/*hello */ if (x >= 5){ x=9;} else { y=10;}; z=23;"
+src_program_str = "let\nx = 10;\nlet y = 20;\nlet z = x + y;\nif z > 10\n{\n    z = z + 1;\n}\nelse\n{\n    z = z - 1;\n}\n"
 tokens = lexer.generate_tokens(src_program_str)
 for token in tokens:
     print(token.TokenType, token.value)
