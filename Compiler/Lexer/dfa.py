@@ -64,6 +64,7 @@ class DFA:
 
     def __init__(self):
         self.states = DFAStates
+        self.start_state = self.states.S_0
         self.final_states = [self.states.S_1, self.states.S_2, self.states.S_3, self.states.S_4, self.states.S_5, self.states.S_6, self.states.S_9, self.states.S_10, self.states.S_12, self.states.S_10, self.states.S_11, self.states.S_12,
                                  self.states.S_13, self.states.S_16, self.states.S_17, self.states.S_18, self.states.S_20, self.states.S_26]
         self.current_state = self.states.S_0
@@ -88,7 +89,8 @@ class DFA:
             (self.states.S_5, 'newline'): self.states.S_6,
             (self.states.S_4, 'star'): self.states.S_7,
             (self.states.S_7, 'star'): self.states.S_8,
-            (self.states.S_8, 'star'): self.states.S_8
+            (self.states.S_8, 'star'): self.states.S_8,
+            (self.states.S_8, 'slash'): self.states.S_6,
         }
         
         for char in ['digit', 'hex', 'letter', 'plus', 'minus', 'star', 'slash', 'punctuation', 'whitespace', 'equals', 'less', 'greater', 'exclamation', 'hash', 'dot', 'underscore', 'other']:
@@ -97,7 +99,7 @@ class DFA:
         for char in ['digit', 'hex', 'letter', 'plus', 'minus', 'slash', 'punctuation', 'whitespace', 'newline', 'equals', 'less', 'greater', 'exclamation', 'hash', 'dot', 'underscore', 'other']:
             self.transitions.update({(self.states.S_7, char): self.states.S_7})
 
-        for char in ['digit', 'hex', 'letter', 'plus', 'minus', 'slash', 'punctuation', 'whitespace', 'newline', 'equals', 'less', 'greater', 'exclamation', 'hash', 'dot', 'underscore', 'other']:
+        for char in ['digit', 'hex', 'letter', 'plus', 'minus', 'punctuation', 'whitespace', 'newline', 'equals', 'less', 'greater', 'exclamation', 'hash', 'dot', 'underscore', 'other']:
             self.transitions.update({(self.states.S_8, char): self.states.S_7})
 
         self.transitions.update({
@@ -120,13 +122,16 @@ class DFA:
             (self.states.S_0, 'underscore'): self.states.S_14,
             (self.states.S_14, 'underscore'): self.states.S_15,
             (self.states.S_15, 'letter'): self.states.S_16,
+            (self.states.S_15, 'hex'): self.states.S_16,
             (self.states.S_16, 'letter'): self.states.S_16,
+            (self.states.S_16, 'hex'): self.states.S_16,
             (self.states.S_16, 'underscore'): self.states.S_16,
             
             # Tokenizing identifiers
             (self.states.S_0, 'letter'): self.states.S_17,
             (self.states.S_0, 'hex'): self.states.S_17,
             (self.states.S_17, 'letter'): self.states.S_17,
+            (self.states.S_17, 'hex'): self.states.S_17,
             (self.states.S_17, 'digit'): self.states.S_17,
             (self.states.S_17, 'underscore'): self.states.S_17,
 
@@ -142,10 +147,15 @@ class DFA:
             # Tokenizing color literals
             (self.states.S_0, 'hash'): self.states.S_21,
             (self.states.S_21, 'hex'): self.states.S_22,
+            (self.states.S_21, 'digit'): self.states.S_22,
             (self.states.S_22, 'hex'): self.states.S_23,
+            (self.states.S_22, 'digit'): self.states.S_23,
             (self.states.S_23, 'hex'): self.states.S_24,
+            (self.states.S_23, 'digit'): self.states.S_24,
             (self.states.S_24, 'hex'): self.states.S_25,
-            (self.states.S_25, 'hex'): self.states.S_26
+            (self.states.S_24, 'digit'): self.states.S_25,
+            (self.states.S_25, 'hex'): self.states.S_26,
+            (self.states.S_25, 'digit'): self.states.S_26
         })
 
     def accepting_states(self, state):
