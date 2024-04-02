@@ -24,67 +24,68 @@ class TokenType(Enum):
     RIGHT_SQ_BRACK = 6
     COMMA = 7
     SEMICOLON = 8
+    COLON = 9
 
     # Special functions tokens
     # These tokens are used to represent the special functions of the language
     
-    RANDOM_INT = 9
-    PRINT = 10
-    DELAY = 11
-    WRITE_BOX = 12
-    WRITE = 13
+    RANDOM_INT = 10
+    PRINT = 11
+    DELAY = 12
+    WRITE_BOX = 13
+    WRITE = 14
 
     # Keywords
     # These tokens are used to represent the keywords of the language
-    AS = 14
-    LET = 15
-    RETURN = 16
-    IF = 17
-    ELSE = 18
-    FOR = 19
-    WHILE = 20
-    FUN = 21
+    AS = 15
+    LET = 16
+    RETURN = 17
+    IF = 18
+    ELSE = 19
+    FOR = 20
+    WHILE = 21
+    FUN = 22
 
     # Identifiers
     # This token is used to represent the identifiers of the language
-    IDENTIFIER = 22
+    IDENTIFIER = 23
 
     # Literals
     # These tokens are used to represent the literals of the language
-    INT_LITERAL = 23
-    FLOAT_LITERAL = 24
-    BOOL_LITERAL = 25
-    COLOR_LITERAL = 26
-    WIDTH = 27
-    HEIGHT = 28
-    READ = 29
+    INT_LITERAL = 24
+    FLOAT_LITERAL = 25
+    BOOL_LITERAL = 26
+    COLOR_LITERAL = 27
+    WIDTH = 28
+    HEIGHT = 29
+    READ = 30
 
 
     # Skip tokens
     # This token is used to represent the tokens that the lexer will skip 
-    SKIP = 30
+    SKIP = 31
 
     # Operators
     # These tokens are used to represent the operators of the language
-    ADDITIVE_OP = 31
-    MULTIPLICATIVE_OP = 32
-    NOT_OP = 33
-    ASSIGNMENT_OP = 34
-    EQUAL_OP = 35
-    NOT_EQUAL_OP = 36
-    GREATER_OP = 37
-    LESS_OP = 38
-    GREATER_EQUAL_OP = 39
-    LESS_EQUAL_OP = 40
-    FUNC_ASSIGNMENT_OP = 41
+    ADDITIVE_OP = 32
+    MULTIPLICATIVE_OP = 33
+    NOT_OP = 34
+    ASSIGNMENT_OP = 35
+    EQUAL_OP = 36
+    NOT_EQUAL_OP = 37
+    GREATER_OP = 38
+    LESS_OP = 39
+    GREATER_EQUAL_OP = 40
+    LESS_EQUAL_OP = 41
+    FUNC_ASSIGNMENT_OP = 42
 
     # End of file token
     # This token is used to represent the end of the file
-    EOF = 42
+    EOF = 43
 
     # Error token
     # This token is used to represent an error in the input
-    ERROR = 43
+    ERROR = 44
 
 # Token Class
 class Token:
@@ -95,7 +96,7 @@ class Token:
     
     """
 
-    def __init__(self, TokenType, value):
+    def __init__(self, TokenType, value, line, column):
         
         """
         
@@ -104,13 +105,17 @@ class Token:
         Parameters:
             TokenType (TokenType): The type of the token.
             value (str): The value of the token.
+            line (int): The line number of the token.
+            column (int): The column number of the token.
             
         """
 
         self.TokenType = TokenType
         self.value = value
+        self.line = line
+        self.column = column
 
-def token_type_by_final_state(final_state, lexeme):
+def token_type_by_final_state(final_state, lexeme, line, column):
 
     """
 
@@ -119,99 +124,109 @@ def token_type_by_final_state(final_state, lexeme):
     Parameters:
         final_state (int): The final state of the DFA.
         lexeme (str): The lexeme that the DFA has recognized.
+        line (int): The line number of the lexeme.
+        column (int): The column number of the lexeme.
+
+    Returns:
+        Token: The token that corresponds to the final state of the DFA.
     
     """
 
+    # Match the final state of the DFA to return the corresponding token
+    # The token type is determined by the final state of the DFA and in some cases by the lexeme
+    
     match (final_state):
         case 1: 
-            TokenType.ADDITIVE_OP
+            return Token(TokenType.ADDITIVE_OP, lexeme, line, column)
         case 2:
-            TokenType.FUNC_ASSIGNMENT_OP
+            return Token(TokenType.FUNC_ASSIGNMENT_OP, lexeme, line, column)
         case 3 if lexeme == "+":
-            TokenType.ADDITIVE_OP
+            return Token(TokenType.ADDITIVE_OP, lexeme, line, column)
         case 3 if lexeme == "*":
-            TokenType.MULTIPLICATIVE_OP
+            return Token(TokenType.MULTIPLICATIVE_OP, lexeme, line, column)
         case 4:
-            TokenType.MULTIPLICATIVE_OP
+            return Token(TokenType.MULTIPLICATIVE_OP, lexeme, line, column)
         case 5:
-            TokenType.SKIP
+            return Token(TokenType.SKIP, lexeme, line, column)
         case 6:
-            TokenType.SKIP
+            return Token(TokenType.SKIP, lexeme, line, column)
         case 9:
-            TokenType.ASSIGNMENT_OP 
+            return Token(TokenType.ASSIGNMENT_OP, lexeme, line, column)
         case 10 if lexeme == ">":
-            TokenType.GREATER_OP
+            return Token(TokenType.GREATER_OP, lexeme, line, column)
         case 10 if lexeme == "<":
-            TokenType.LESS_OP
+            return Token(TokenType.LESS_OP, lexeme, line, column)
         case 12 if lexeme == "!=":
-            TokenType.NOT_EQUAL_OP
+            return Token(TokenType.NOT_EQUAL_OP, lexeme, line, column)
         case 12 if lexeme == "==":
-            TokenType.EQUAL_OP
+            return Token(TokenType.EQUAL_OP, lexeme, line, column)
         case 12 if lexeme == ">=":
-            TokenType.GREATER_EQUAL_OP
+            return Token(TokenType.GREATER_EQUAL_OP, lexeme, line, column)
         case 12 if lexeme == "<=":
-            TokenType.LESS_EQUAL_OP
+            return Token(TokenType.LESS_EQUAL_OP, lexeme, line, column)
         case 13 if lexeme == "(":
-            TokenType.LEFT_PAREN
+            return Token(TokenType.LEFT_PAREN, lexeme, line, column)
         case 13 if lexeme == ")":
-            TokenType.RIGHT_PAREN
+            return Token(TokenType.RIGHT_PAREN, lexeme, line, column)
         case 13 if lexeme == "{":
-            TokenType.LEFT_BRACE
+            return Token(TokenType.LEFT_BRACE, lexeme, line, column)
         case 13 if lexeme == "}":
-            TokenType.RIGHT_BRACE
+            return Token(TokenType.RIGHT_BRACE, lexeme, line, column)
         case 13 if lexeme == "[":
-            TokenType.LEFT_SQ_BRACK
+            return Token(TokenType.LEFT_SQ_BRACK, lexeme, line, column)
         case 13 if lexeme == "]":
-            TokenType.RIGHT_SQ_BRACK
+            return Token(TokenType.RIGHT_SQ_BRACK, lexeme, line, column)
         case 13 if lexeme == ",":
-            TokenType.COMMA
+            return Token(TokenType.COMMA, lexeme, line, column)
         case 13 if lexeme == ";":
-            TokenType.SEMICOLON
+            return Token(TokenType.SEMICOLON, lexeme, line, column)
+        case 13 if lexeme == ":":
+            return Token(TokenType.COLON, lexeme, line, column)
         case 16 if lexeme == "__width":
-            TokenType.WIDTH
+            return Token(TokenType.WIDTH, lexeme, line, column)
         case 16 if lexeme == "__height":
-            TokenType.HEIGHT
+            return Token(TokenType.HEIGHT, lexeme, line, column)
         case 16 if lexeme == "__read":
-            TokenType.READ
+            return Token(TokenType.READ, lexeme, line, column)
         case 16 if lexeme == "__random_int":
-            TokenType.RANDOM_INT
+            return Token(TokenType.RANDOM_INT, lexeme, line, column)
         case 16 if lexeme == "__print":
-            TokenType.PRINT
+            return Token(TokenType.PRINT, lexeme, line, column)
         case 16 if lexeme == "__delay":
-            TokenType.DELAY
+            return Token(TokenType.DELAY, lexeme, line, column)
         case 16 if lexeme == "__write_box":
-            TokenType.WRITE_BOX
+            return Token(TokenType.WRITE_BOX, lexeme, line, column)
         case 16 if lexeme == "__write":
-            TokenType.WRITE
-        case 16:
-            TokenType.ERROR
+            return Token(TokenType.WRITE, lexeme, line, column)
         case 17 if lexeme == "as":
-            TokenType.AS
+            return Token(TokenType.AS, lexeme, line, column)
         case 17 if lexeme == "let":
-            TokenType.LET
+            return Token(TokenType.LET, lexeme, line, column)
         case 17 if lexeme == "return":
-            TokenType.RETURN
+            return Token(TokenType.RETURN, lexeme, line, column)
         case 17 if lexeme == "if":
-            TokenType.IF
+            return Token(TokenType.IF, lexeme, line, column)
         case 17 if lexeme == "else":
-            TokenType.ELSE
+            return Token(TokenType.ELSE, lexeme, line, column)
         case 17 if lexeme == "for":
-            TokenType.FOR
+            return Token(TokenType.FOR, lexeme, line, column)
         case 17 if lexeme == "while":
-            TokenType.WHILE
+            return Token(TokenType.WHILE, lexeme, line, column)
         case 17 if lexeme == "fun":
-            TokenType.FUN
+            return Token(TokenType.FUN, lexeme, line, column)
         case 17 if lexeme == "true" or lexeme == "false":
-            TokenType.BOOL_LITERAL
+            return Token(TokenType.BOOL_LITERAL, lexeme, line, column)
         case 17 if lexeme == "and":
-            TokenType.MULTIPLICATIVE_OP
+            return Token(TokenType.MULTIPLICATIVE_OP, lexeme, line, column)
         case 17 if lexeme == "or":
-            TokenType.ADDITIVE_OP
+            return Token(TokenType.ADDITIVE_OP, lexeme, line, column)
         case 17 if lexeme == "not":
-            TokenType.NOT_OP
+            return Token(TokenType.NOT_OP, lexeme, line, column)
         case 18: 
-            TokenType.INT_LITERAL
+            return Token(TokenType.INT_LITERAL, lexeme, line, column)
         case 20:
-            TokenType.FLOAT_LITERAL
+            return Token(TokenType.FLOAT_LITERAL, lexeme, line, column)
         case 26:
-            TokenType.COLOR_LITERAL
+            return Token(TokenType.COLOR_LITERAL, lexeme, line, column)
+        case _:
+            return Token(TokenType.ERROR, lexeme, line, column)
