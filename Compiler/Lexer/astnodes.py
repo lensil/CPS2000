@@ -1,4 +1,5 @@
 # To do: should i have different nodes for each literal type???
+# to do: add statement node and pass it accordingly
 class ASTNode: 
 
     """
@@ -356,17 +357,111 @@ class ASTFunctionNode(ASTNode):
 
 class ASTBlockNode(ASTNode):
     
-        """
+    """
         
-        Represents a block node in the AST. It contains a list of statements.
+    Represents a block node in the AST. It contains a list of statements.
+    
+    Parameters:
+        statements (list): The statements in the block.
+        line_number (int): The line number in the source code where the block node is located.
+        
+    """
+    
+    def __init__(self, statements, line_number):
+        self.name = "ASTBlockNode"
+        self.statements = statements
+        self.line_number = line_number
+
+    def add_statement(self, statement):
+            
+        """
+            
+        Adds a statement to the list of statements in the block node.
     
         Parameters:
-            statements (list): The statements in the block.
-            line_number (int): The line number in the source code where the block node is located.
-        
+            statement (ASTNode): The statement to add to the block node.
+            
         """
+        
+        self.statements.append(statement)
+
+class ASTAssignmentNode(ASTNode):
+
+    """
+    Represents an assignment node in the AST. It contains the identifier and the expression to assign to it.
+
+    Parameters:
+        identifier (str): The identifier to assign to.
+        expression (ASTExpressionNode): The expression to assign to the identifier.
+        line_number (int): The line number in the source code where the assignment node is located.
+
+    """
+
+    def __init__(self, identifier, expression, line_number):
+        self.name = "ASTAssignmentNode"
+        self.identifier = identifier
+        self.expression = expression
+        self.line_number = line_number
+
+class ASTIfNode(ASTNode):
+
+    """
     
-        def __init__(self, statements, line_number):
-            self.name = "ASTBlockNode"
-            self.statements = statements
-            self.line_number = line_number
+    Represents an if statement node in the AST. It contains the condition, true block and optional false block.
+
+    Parameters:
+        condition (ASTExpressionNode): The condition of the if statement.
+        true_block (ASTBlockNode): The block to execute if the condition is true.
+        false_block (ASTBlockNode): The block to execute if the condition is false.
+        line_number (int): The line number in the source code where the if node is located.
+    
+    """
+
+    def __init__(self, condition, true_block, false_block, line_number):
+        self.name = "ASTIfNode"
+        self.condition = condition
+        self.true_block = true_block
+        self.false_block = false_block
+        self.line_number = line_number
+
+class ASTWhileNode(ASTNode):
+    
+    """
+
+    Represents a while statement node in the AST. It contains the condition and the block to execute.
+
+    Parameters:
+        condition (ASTExpressionNode): The condition of the while statement.
+        block (ASTBlockNode): The block to execute while the condition is true.
+        line_number (int): The line number in the source code where the while node is located.
+    
+    """
+
+    def __init__(self, condition, block, line_number):
+        self.name = "ASTWhileNode"
+        self.condition = condition
+        self.block = block
+        self.line_number = line_number
+
+class ASTForNode(ASTNode):
+
+    """
+    
+    Represents a for statement node in the AST. It contains the initial value, condition, increment and block to execute.
+    
+    Parameters:
+        init (ASTNode): The initial value of the for loop.
+        condition (ASTExpressionNode): The condition of the for loop.
+        increment (ASTNode): The increment of the for loop.
+        block (ASTBlockNode): The block to execute in the for loop.
+        line_number (int): The line number in the source code where the for node is located.
+    
+    """
+
+    def __init__(self, init, condition, increment, block, line_number):
+        self.name = "ASTForNode"
+        self.init = init
+        self.condition = condition
+        self.increment = increment
+        self.block = block
+        self.line_number = line_number

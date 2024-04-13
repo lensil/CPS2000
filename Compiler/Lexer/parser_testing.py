@@ -13,7 +13,6 @@ class Parser:
         self.nextToken = lexer.Token("", lexer.TokenType.ERROR, -1)
         self.ASTroot = ast.ASTProgramNode() 
 
-
     def parse_statement(self):
 
         """
@@ -29,7 +28,7 @@ class Parser:
             case TokenType.LET:
                 return self.parse_variable_declartion()
             case TokenType.IDENTIFIER if self.nextToken.TokenType == TokenType.ASSIGNMENT_OP:
-                return self.parse_assignment()
+                return self.parse_assignment_statement()
             case TokenType.PRINT:
                 return self.parse_print_statement()
             case TokenType.DELAY:
@@ -65,10 +64,9 @@ class Parser:
         line = self.crtToken.line
         self.advance() # skip the let token
 
-        var_name = self.crtToken # get the current token - should be an identifier
-        if var_name.TokenType != TokenType.IDENTIFIER:
+        if self.crtToken.TokenType != TokenType.IDENTIFIER:
             raise Exception("Expected identifier after let on line ", var_name.line)
-    
+        var_name = ast.ASTVariableNode(self.crtToken.value, line) # get the current token - should be the variable name
         self.advance() # increment the current token to the next token
 
         next_token = self.crtToken # get the current token - should be :
@@ -237,7 +235,7 @@ class Parser:
         
         """
 
-        function_name = self.crtToken
+        function_name = self.crtToken.value
         line = self.crtToken.line
         self.advance() # Advance to the next token
 
@@ -284,7 +282,50 @@ class Parser:
         return parameters # Return the list of parameters
 
     def parse_assignment(self):
-        pass
+        
+        """
+
+        Parse an assignment statement
+
+        Returns:
+            ASTNode: An assignment statement node
+
+        """
+
+        line = self.crtToken.line
+
+        identifier_node = ast.ASTVariableNode(self.crtToken.value, line) # Create a variable node
+
+        self.advance() # Advance to the next token
+
+        if self.crtToken.TokenType != TokenType.ASSIGNMENT_OP: # Check if the next token is an assignment operator
+            raise Exception("Expected '=' after variable name on line ", self.crtToken.line) # Raise an exception if the next token is not an assignment operator
+        
+        self.advance() # Advance to the next token - assignment operator is skipped
+
+        expression = self.parse_expression() # Parse the expression
+
+        return ast.ASTAssignmentNode(identifier_node, expression, line) # Return the assignment statement node
+    
+    def parse_assignment_statement(self):
+            
+        """
+    
+        Parse an assignment statement
+    
+        Returns:
+            ASTNode: An assignment statement node
+    
+        """
+    
+        assignment = self.parse_assignment()
+
+        if self.crtToken.TokenType != TokenType.SEMICOLON: # Check if the next token is a semicolon
+            raise Exception("Expected ';' after assignment on line ", self.crtToken.line) # Raise an exception if the next token is not a semicolon
+            
+        self.advance() # Advance to the next token - semicolon is skipped
+
+        return assignment # Return the assignment statement node
 
     def parse_print_statement(self):
 
@@ -305,6 +346,8 @@ class Parser:
         if self.crtToken.TokenType != TokenType.SEMICOLON: # Check if the next token is a semicolon
             raise Exception("Expected ';' after print expression on line ", self.crtToken.line) # Raise an exception if the next token is not a semicolon
         
+        self.advance() # Advance to the next token - semicolon is skipped
+
         return ast.ASTPrintNode(expression, line) # Return the print statement node
 
     def parse_delay_statement(self):
@@ -326,6 +369,8 @@ class Parser:
         if self.crtToken.TokenType != TokenType.SEMICOLON: # Check if the next token is a semicolon
             raise Exception("Expected ';' after delay expression on line ", self.crtToken.line) # Raise an exception if the next token is not a semicolon
         
+        self.advance() # Advance to the next token - semicolon is skipped
+
         return ast.ASTDelayNode(expression, line) # Return the delay statement node
 
     def parse_write_statement(self):
@@ -398,16 +443,101 @@ class Parser:
         if self.crtToken.TokenType != TokenType.SEMICOLON: # Check if the next token is a semicolon
             raise Exception("Expected ';' after write expression on line ", self.crtToken.line) # Raise an exception if the next token is not a semicolon
         
+        self.advance() # Advance to the next token - semicolon is skipped
+
         return write_node
 
     def parse_if_statement(self):
-        pass
+        
+        line = self.crtToken.line
+        self.advance() # Advance to the next token - if is skipped
+
+        if self.crtToken.TokenType != TokenType.LEFT_PAREN: # Check if the next token is a left parenthesis
+            raise Exception("Expected '(' after if on line ", self.crtToken.line) # Raise an exception if the next token is not a left parenthesis
+        
+        self.advance() # Advance to the next token
+
+        condition = self.parse_expression() # Parse the expression
+
+        if self.crtToken.TokenType != TokenType.RIGHT_PAREN: # Check if the next token is a right parenthesis
+            raise Exception("Expected ')' after condition on line ", self.crtToken.line) # Raise an exception if the next token is not a right parenthesis
+        
+        self.advance() # Advance to the next token - right parenthesis is skipped
+
+        true_block = self.parse_block() # Parse the block
+
+        false_block = None # Optional block
+
+        if self.crtToken.TokenType == TokenType.ELSE: # Check if the next token is an else
+            self.advance() # Advance to the next token - else is skipped
+            false_block = self.parse_block() # Parse the optional block
+
+        return ast.ASTIfNode(condition, true_block, false_block, line) # Return the if statement node
 
     def parse_for_statement(self):
-        pass
+        
+        line = self.crtToken.line
+        self.advance() # Advance to the next token - for is skipped
+
+        if self.crtToken.TokenType != TokenType.LEFT_PAREN: # Check if the next token is a left parenthesis
+            raise Exception("Expected '(' after for on line ", self.crtToken.line) # Raise an exception if the next token is not a left parenthesis
+        
+        self.advance() # Advance to the next token - left parenthesis is skipped
+
+        variable = None
+
+        if self.crtToken.TokenType == TokenType.LET: # Check if the next token is a let
+            variable = self.parse_variable_declartion() # Parse the variable declaration
+        
+        condition = self.parse_expression() # Parse the expression
+
+        if self.crtToken.TokenType != TokenType.SEMICOLON: # Check if the next token is a semicolon
+            raise Exception("Expected ';' after condition on line ", self.crtToken.line) # Raise an exception if the next token is not a semicolon
+        
+        self.advance() # Advance to the next token - semicolon is skipped
+
+        increment = None
+        if (self.crtToken.TokenType == TokenType.IDENTIFIER):
+            increment = self.parse_assignment()
+
+        if self.crtToken.TokenType != TokenType.RIGHT_PAREN: # Check if the next token is a right parenthesis
+            raise Exception("Expected ')' after increment on line ", self.crtToken.line) # Raise an exception if the next token is not a right parenthesis
+        
+        self.advance() # Advance to the next token - right parenthesis is skipped
+
+        block = self.parse_block() # Parse the block
+
+        return ast.ASTForNode(variable, condition, increment, block, line) # Return the for statement node
 
     def parse_while_statement(self):
-        pass
+
+        """
+        
+        Parse a while statement
+        
+        Returns:
+            ASTNode: A while statement node
+            
+        """
+        
+        line = self.crtToken.line
+        self.advance()
+
+        if self.crtToken.TokenType != TokenType.LEFT_PAREN:
+            raise Exception("Expected '(' after while on line ", self.crtToken.line)
+        
+        self.advance() # Advance to the next token - left parenthesis is skipped
+
+        condition = self.parse_expression()
+
+        if self.crtToken.TokenType != TokenType.RIGHT_PAREN:
+            raise Exception("Expected ')' after condition on line ", self.crtToken.line)
+        
+        self.advance() # Advance to the next token - right parenthesis is skipped
+
+        block = self.parse_block()
+
+        return ast.ASTWhileNode(condition, block, line)
 
     def parse_return_statement(self):
 
@@ -457,7 +587,7 @@ class Parser:
         
         self.advance() # Advance to the next token
 
-        parameters = self.parse_fromal_parameters() # Parse the parameters
+        parameters = self.parse_formal_parameters() # Parse the parameters
 
         if self.crtToken.TokenType != TokenType.RIGHT_PAREN: # Check if the current token is a right parenthesis
             raise Exception("Expected ')' after function parameters on line ", self.crtToken.line)
@@ -480,7 +610,7 @@ class Parser:
 
         return ast.ASTFunctionNode(function_name, parameters, return_type, func_block, line) # Return the function declaration node
     
-    def parse_fromal_parameter(self):
+    def parse_formal_parameter(self):
 
         """
 
@@ -513,7 +643,7 @@ class Parser:
 
         return ast.ASTFormalParameterNode(identifier, type, line)
     
-    def parse_fromal_parameters(self):
+    def parse_formal_parameters(self):
 
         """
 
@@ -583,12 +713,30 @@ class Parser:
         else:
             self.nextToken = lexer.Token("", lexer.TokenType.EOF, -1)   
 
-    def Parse(self):        
+    def parse_program(self):
+
+        """
+
+        Parses the program
+
+        Returns:
+            ASTNode: A program node
+
+        """
+    
         self.advance()
-        self.ASTroot = self.parse_statement()
+        block = ast.ASTBlockNode([], self.crtToken.line)
+        while self.crtToken.TokenType != lexer.TokenType.EOF:
+            statement = self.parse_statement()
+            block.statements.append(statement)
+        self.ASTroot.add_statement(block) # Add the block to the AST program node
+        return self.ASTroot
+    
+    def Parse(self):        
+        self.ASTroot = self.parse_program()
 
 # Test the parser
-src_program = " "
+src_program = "for (let u:int = 0; u<w; u = u+1) \n { __print x; }"
 parser = Parser(src_program)
 parser.Parse()
 print(parser.ASTroot)
