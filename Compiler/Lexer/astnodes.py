@@ -267,7 +267,7 @@ class ASTWriteNode(ASTNode):
 
     def __init__(self, expression_1, expression_2, expression_3, line_number):
         self.name = "ASTWriteNode"
-        self.expression_1 = expression_1,
+        self.expression_1 = expression_1
         self.expression_2 = expression_2
         self.expression_3 = expression_3
         self.line_number = line_number
@@ -353,3 +353,20 @@ class ASTFunctionNode(ASTNode):
         self.return_type = return_type
         self.body = body
         self.line_number = line_number
+
+class ASTBlockNode(ASTNode):
+    
+        """
+        
+        Represents a block node in the AST. It contains a list of statements.
+    
+        Parameters:
+            statements (list): The statements in the block.
+            line_number (int): The line number in the source code where the block node is located.
+        
+        """
+    
+        def __init__(self, statements, line_number):
+            self.name = "ASTBlockNode"
+            self.statements = statements
+            self.line_number = line_number

@@ -2,7 +2,7 @@ import lexer
 import astnodes as ast
 from tokens import TokenType
 
-# To do: check if the line number is correct for all nodes
+# To do:  lexer check for EOF taken and make work with empty string
 class Parser:
     def __init__(self, src_program_str):
         self.lexer = lexer.Lexer()
@@ -28,13 +28,13 @@ class Parser:
         match self.crtToken.TokenType:
             case TokenType.LET:
                 return self.parse_variable_declartion()
-            case TokenType.IDENTIFIER if self.nextToken.TokenType == TokenType.EQUALS:
+            case TokenType.IDENTIFIER if self.nextToken.TokenType == TokenType.ASSIGNMENT_OP:
                 return self.parse_assignment()
             case TokenType.PRINT:
                 return self.parse_print_statement()
             case TokenType.DELAY:
                 return self.parse_delay_statement()
-            case TokenType.WRITE, TokenType.WRITE_BOX:
+            case TokenType.WRITE | TokenType.WRITE_BOX:
                 return self.parse_write_statement()
             case TokenType.IF:
                 return self.parse_if_statement()
@@ -91,12 +91,12 @@ class Parser:
     
         var_expression = self.parse_expression() # get an expression node
 
-        self.advance() # increment the current token to the next token
-
         next_token = self.crtToken # get the current token - should be ;
         if next_token.TokenType != TokenType.SEMICOLON:
             raise Exception("Expected ';' after variable expression on line ", next_token.line)
-    
+
+        self.advance() # increment the current token to the next token - ; is skipped
+
         return ast.ASTVarDecNode(var_name, var_type, var_expression, line) # return the variable declaration node
 
     def parse_expression(self):
@@ -212,6 +212,7 @@ class Parser:
                 sub_expression = self.parse_expression()
                 if self.crtToken.TokenType != TokenType.RIGHT_PAREN: # Check if the next token is a right parenthesis
                     raise Exception("Expected ')' on line ", self.crtToken.line) # Raise an exception if the next token is not a right parenthesis
+                self.advance() # Advance to the next token - right parenthesis is skipped
                 return sub_expression
             case TokenType.READ:
                 line = self.crtToken.line
@@ -286,13 +287,118 @@ class Parser:
         pass
 
     def parse_print_statement(self):
-        pass
+
+        """
+
+        Parse a print statement
+
+        Returns:
+            ASTNode: A print statement node
+
+        """
+
+        line = self.crtToken.line
+        self.advance() # Advance to the next token - print is skipped
+
+        expression = self.parse_expression() # Parse the expression
+
+        if self.crtToken.TokenType != TokenType.SEMICOLON: # Check if the next token is a semicolon
+            raise Exception("Expected ';' after print expression on line ", self.crtToken.line) # Raise an exception if the next token is not a semicolon
+        
+        return ast.ASTPrintNode(expression, line) # Return the print statement node
 
     def parse_delay_statement(self):
-        pass
+
+        """
+
+        Parse a delay statement
+
+        Returns:
+            ASTNode: A delay statement node
+
+        """
+        
+        line = self.crtToken.line
+        self.advance() # Advance to the next token - delay keywork is skipped
+
+        expression = self.parse_expression() # Parse the expression
+
+        if self.crtToken.TokenType != TokenType.SEMICOLON: # Check if the next token is a semicolon
+            raise Exception("Expected ';' after delay expression on line ", self.crtToken.line) # Raise an exception if the next token is not a semicolon
+        
+        return ast.ASTDelayNode(expression, line) # Return the delay statement node
 
     def parse_write_statement(self):
-        pass
+
+        """
+
+        Parse a write statement
+
+        Returns:
+            ASTNode: A write statement node
+
+        """
+
+        line = self.crtToken.line
+
+        write_node = None # Stores the write node
+        
+        if self.crtToken.value == "__write":
+            self.advance() # Advance to the next token - write keywork is skipped
+
+            expression_1 = self.parse_expression() # Parse the expression
+
+            if self.crtToken.TokenType != TokenType.COMMA: # Check if the next token is a comma
+                raise Exception("Expected ',' after write expression on line ", self.crtToken.line) # Raise an exception if the next token is not a comma
+            
+            self.advance() # Advance to the next token - comma is skipped
+
+            expression_2 = self.parse_expression() # Parse the expression
+
+            if self.crtToken.TokenType != TokenType.COMMA: # Check if the next token is a comma
+                raise Exception("Expected ',' after write expression on line ", self.crtToken.line) # Raise an exception if the next token is not a comma
+            
+            self.advance() # Advance to the next token - comma is skipped
+
+            expression_3 = self.parse_expression() # Parse the expression
+
+            write_node = ast.ASTWriteNode(expression_1, expression_2, expression_3, line) # Create a write node
+
+        elif self.crtToken.value == "__write_box":
+            self.advance() # Advance to the next token - write box keywork is skipped
+
+            expression_1 = self.parse_expression() # Parse the expression
+
+            if self.crtToken.TokenType != TokenType.COMMA: # Check if the next token is a comma
+                raise Exception("Expected ',' after write expression on line ", self.crtToken.line) # Raise an exception if the next token is not a comma
+            
+            self.advance() # Advance to the next token - comma is skipped
+            
+            expression_2 = self.parse_expression() # Parse the expression
+
+            if self.crtToken.TokenType != TokenType.COMMA: # Check if the next token is a comma
+                raise Exception("Expected ',' after write expression on line ", self.crtToken.line) # Raise an exception if the next token is not a comma
+            
+            self.advance() # Advance to the next token - comma is skipped
+
+            expression_3 = self.parse_expression() # Parse the expression
+
+            if self.crtToken.TokenType != TokenType.COMMA: # Check if the next token is a comma
+                raise Exception("Expected ',' after write expression on line ", self.crtToken.line) # Raise an exception if the next token is not a comma
+            
+            self.advance() # Advance to the next token - comma is skipped
+
+            expression_4 = self.parse_expression() # Parse the expression
+
+            write_node = ast.ASTWriteBoxNode(expression_1, expression_2, expression_3, expression_4, line) # Create a write box node
+
+        else :
+            raise Exception("Invalid write statement on line ", self.crtToken.line)
+        
+        if self.crtToken.TokenType != TokenType.SEMICOLON: # Check if the next token is a semicolon
+            raise Exception("Expected ';' after write expression on line ", self.crtToken.line) # Raise an exception if the next token is not a semicolon
+        
+        return write_node
 
     def parse_if_statement(self):
         pass
@@ -303,15 +409,163 @@ class Parser:
     def parse_while_statement(self):
         pass
 
-
     def parse_return_statement(self):
-        pass
+
+        """
+
+        Parse a return statement
+
+        Returns:
+            ASTNode: A return statement node
+        
+        """
+
+        line = self.crtToken.line
+        self.advance() # Advance to the next token - return is skipped
+
+        expression = self.parse_expression() # Parse the expression
+
+        if self.crtToken.TokenType != TokenType.SEMICOLON: # Check if the next token is a semicolon
+            raise Exception("Expected ';' after return expression on line ", self.crtToken.line)
+        
+        self.advance() # Advance to the next token - semicolon is skipped
+
+        return ast.ASTReturnNode(expression, line) # Return the return statement node
 
     def parse_function_declaration(self):
-        pass
+
+        """
+
+        Parse a function declaration
+
+        Returns:
+            ASTNode: A function declaration node
+
+        """
+        
+        line = self.crtToken.line
+        self.advance() # Advance to the next token - fun is skipped
+
+        function_name = self.crtToken # Get the current token - should be an identifier
+        if function_name.TokenType != TokenType.IDENTIFIER: # Check if the current token is an identifier
+            raise Exception("Expected identifier after fun on line ", function_name.line)
+        
+        self.advance() # Advance to the next token
+
+        if self.crtToken.TokenType != TokenType.LEFT_PAREN: # Check if the current token is a left parenthesis
+            raise Exception("Expected '(' after function name on line ", self.crtToken.line)
+        
+        self.advance() # Advance to the next token
+
+        parameters = self.parse_fromal_parameters() # Parse the parameters
+
+        if self.crtToken.TokenType != TokenType.RIGHT_PAREN: # Check if the current token is a right parenthesis
+            raise Exception("Expected ')' after function parameters on line ", self.crtToken.line)
+
+        self.advance() # Advance to the next token
+
+        if self.crtToken.TokenType != TokenType.FUNC_ASSIGNMENT_OP: # Check if the current token is a colon
+            raise Exception("Expected '->' after function parameters on line ", self.crtToken.line)
+        
+        self.advance() # Advance to the next token
+
+        return_type = self.crtToken # Get the current token - should be a type
+
+        if return_type.TokenType != TokenType.TYPE: # Check if the current token is a type
+            raise Exception("Expected type after '->' on line ", return_type.line)
+        
+        self.advance() # Advance to the next token
+
+        func_block = self.parse_block() # Parse the block
+
+        return ast.ASTFunctionNode(function_name, parameters, return_type, func_block, line) # Return the function declaration node
+    
+    def parse_fromal_parameter(self):
+
+        """
+
+        Parse a formal parameter
+
+        Returns:
+            ASTNode: A formal parameter node
+
+        """
+        
+        line = self.crtToken.line
+        identifier = self.crtToken
+
+        if identifier.TokenType != TokenType.IDENTIFIER: # Check if the current token is an identifier
+            raise Exception("Expected identifier after '(' on line ", identifier.line) # Raise an exception if the current token is not an identifier
+        
+        self.advance() # Advance to the next token
+
+        if self.crtToken.TokenType != TokenType.COLON: # Check if the current token is a colon
+            raise Exception("Expected ':' after parameter name on line ", self.crtToken.line)
+        
+        self.advance() # Advance to the next token
+
+        type = self.crtToken
+
+        if type.TokenType != TokenType.TYPE: # Check if the current token is a type
+            raise Exception("Expected type after ':' on line ", self.crtToken.line) # Raise an exception if the current token is not a type
+        
+        self.advance() # Advance to the next token
+
+        return ast.ASTFormalParameterNode(identifier, type, line)
+    
+    def parse_fromal_parameters(self):
+
+        """
+
+        Parse the parameters of a function declaration
+
+        Returns:
+            list: A list of formal parameter nodes
+
+        """
+
+        parameters = []
+
+        if self.crtToken.TokenType == TokenType.RIGHT_PAREN: # Check if the current token is a right parenthesis
+            return parameters # Return since there are no parameters
+
+        parameter = self.parse_fromal_parameter()
+
+        parameters.append(parameter)
+
+        while self.crtToken.TokenType == TokenType.COMMA:
+            self.advance()
+            parameter = self.parse_fromal_parameter()
+            parameters.append(parameter)
+
+        return parameters
 
     def parse_block(self):
-        pass
+
+        """
+
+        Parse a block
+
+        Returns:
+            ASTNode: A block node
+
+        """
+        
+        line = self.crtToken.line # Get the line number
+        self.advance() # Advance to the next token - left brace is skipped
+
+        statements = [] # Create an empty list to store the statements
+
+        while self.crtToken.TokenType != TokenType.RIGHT_BRACE and self.crtToken.TokenType != TokenType.EOF: # Check if the current token is a right brace or EOF
+            statement = self.parse_statement() # Parse the statement
+            statements.append(statement) # Append the statement to the list of statements
+
+        if self.crtToken.TokenType != TokenType.RIGHT_BRACE: # Check if the current token is a right brace
+            raise Exception("Expected '}' on line ", self.crtToken.line) # Raise an exception if the current token is not a right brace
+        
+        self.advance() # Advance to the next token
+
+        return ast.ASTBlockNode(statements, line)
 
     def advance(self):
 
@@ -332,3 +586,9 @@ class Parser:
     def Parse(self):        
         self.advance()
         self.ASTroot = self.parse_statement()
+
+# Test the parser
+src_program = " "
+parser = Parser(src_program)
+parser.Parse()
+print(parser.ASTroot)
