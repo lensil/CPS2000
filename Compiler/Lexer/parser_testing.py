@@ -117,13 +117,15 @@ class Parser:
             self.advance() # Set the operator as the current token
             expression = ast.ASTBinaryOpNode(expression, self.parse_simple_expression(), operator, line) # Return the binary operation node
         
-        if(self.nextToken.TokenType == TokenType.AS): # Check if the expression is typcasted
-            self.advance() # Set the as as the current token
+        if(self.crtToken.TokenType == TokenType.AS): # Check if the expression is typcasted
             if (self.nextToken.TokenType == TokenType.TYPE): # Check if the next token is a type
                 self.advance() # Set the type as the current token
                 expression.add_type(self.crtToken.value) # Add the type to the simple expression
+                self.advance() # Advance to the next token
             else:
                 raise Exception("Expected type after as on line ", self.crtToken.line)
+        else:
+            expression.add_type(None)
 
         return expression # Return the simple expression node
 
@@ -736,7 +738,7 @@ class Parser:
         self.ASTroot = self.parse_program()
 
 # Test the parser
-src_program = "for (let u:int = 0; u<w; u = u+1) \n { __print x; }"
+src_program = "let x: bool = 5; "
 parser = Parser(src_program)
 parser.Parse()
 print(parser.ASTroot)
