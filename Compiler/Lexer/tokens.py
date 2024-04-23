@@ -28,7 +28,6 @@ class TokenType(Enum):
 
     # Special functions tokens
     # These tokens are used to represent the special functions of the language
-    
     RANDOM_INT = 10
     PRINT = 11
     DELAY = 12
@@ -60,32 +59,30 @@ class TokenType(Enum):
     HEIGHT = 29
     READ = 30
 
+    # These tokens are used to represent types of the language
+    TYPE = 31
 
     # Skip tokens
     # This token is used to represent the tokens that the lexer will skip 
-    SKIP = 31
+    SKIP = 32
 
     # Operators
     # These tokens are used to represent the operators of the language
-    ADDITIVE_OP = 32
-    MULTIPLICATIVE_OP = 33
-    NOT_OP = 34
-    ASSIGNMENT_OP = 35
-    EQUAL_OP = 36
-    NOT_EQUAL_OP = 37
-    GREATER_OP = 38
-    LESS_OP = 39
-    GREATER_EQUAL_OP = 40
-    LESS_EQUAL_OP = 41
-    FUNC_ASSIGNMENT_OP = 42
+    ADDITIVE_OP = 33
+    MULTIPLICATIVE_OP = 34
+    NOT_OP = 35
+    ASSIGNMENT_OP = 36
+    EQUAL_OP = 37
+    RELATIONAL_OP = 38
+    FUNC_ASSIGNMENT_OP = 39
 
     # End of file token
     # This token is used to represent the end of the file
-    EOF = 43
+    EOF = 40
 
     # Error token
     # This token is used to represent an error in the input
-    ERROR = 44
+    ERROR = 41
 
 # Token Class
 class Token:
@@ -150,17 +147,17 @@ def token_type_by_final_state(final_state, lexeme, line):
         case 9:
             return Token(TokenType.ASSIGNMENT_OP, lexeme, line)
         case 10 if lexeme == ">":
-            return Token(TokenType.GREATER_OP, lexeme, line)
+            return Token(TokenType.RELATIONAL_OP, lexeme, line)
         case 10 if lexeme == "<":
-            return Token(TokenType.LESS_OP, lexeme, line)
+            return Token(TokenType.RELATIONAL_OP, lexeme, line)
         case 12 if lexeme == "!=":
-            return Token(TokenType.NOT_EQUAL_OP, lexeme, line)
+            return Token(TokenType.RELATIONAL_OP, lexeme, line)
         case 12 if lexeme == "==":
             return Token(TokenType.EQUAL_OP, lexeme, line)
         case 12 if lexeme == ">=":
-            return Token(TokenType.GREATER_EQUAL_OP, lexeme, line)
+            return Token(TokenType.RELATIONAL_OP, lexeme, line)
         case 12 if lexeme == "<=":
-            return Token(TokenType.LESS_EQUAL_OP, lexeme, line)
+            return Token(TokenType.RELATIONAL_OP, lexeme, line)
         case 13 if lexeme == "(":
             return Token(TokenType.LEFT_PAREN, lexeme, line)
         case 13 if lexeme == ")":
@@ -197,6 +194,15 @@ def token_type_by_final_state(final_state, lexeme, line):
             return Token(TokenType.WRITE, lexeme, line)
         case 17 if lexeme == "as":
             return Token(TokenType.AS, lexeme, line)
+        # EXPAND ON THIS
+        case 17 if lexeme == "float":
+            return Token(TokenType.TYPE, lexeme, line)
+        case 17 if lexeme == "int":
+            return Token(TokenType.TYPE, lexeme, line)
+        case 17 if lexeme == "bool":
+            return Token(TokenType.TYPE, lexeme, line)
+        case 17 if lexeme == "colour":
+            return Token(TokenType.TYPE, lexeme, line)
         case 17 if lexeme == "let":
             return Token(TokenType.LET, lexeme, line)
         case 17 if lexeme == "return":

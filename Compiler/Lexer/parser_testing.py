@@ -661,13 +661,13 @@ class Parser:
         if self.crtToken.TokenType == TokenType.RIGHT_PAREN: # Check if the current token is a right parenthesis
             return parameters # Return since there are no parameters
 
-        parameter = self.parse_fromal_parameter()
+        parameter = self.parse_formal_parameter()
 
         parameters.append(parameter)
 
         while self.crtToken.TokenType == TokenType.COMMA:
             self.advance()
-            parameter = self.parse_fromal_parameter()
+            parameter = self.parse_formal_parameter()
             parameters.append(parameter)
 
         return parameters

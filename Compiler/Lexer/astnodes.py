@@ -48,7 +48,6 @@ class ASTProgramNode(ASTNode):
         """
         return visitor.visit_program_node(self)
 
-
 class ASTExpressionNode(ASTNode):
 
     """
@@ -78,7 +77,6 @@ class ASTExpressionNode(ASTNode):
         """
         
         self.cast_expr = type
-
 
 class ASTLiteralNode(ASTExpressionNode):
 
@@ -203,7 +201,6 @@ class ASTRandomNode(ASTExpressionNode):
     
         return visitor.visit_random_node(self)
 
-
 class ASTReadNode(ASTExpressionNode):
             
     """
@@ -241,7 +238,6 @@ class ASTFunctionCallNode(ASTExpressionNode):
         self.function_name = function_name
         self.parameters = parameters
         self.line_number = line_number
-
 
 class ASTBinaryOpNode(ASTExpressionNode):
 
@@ -326,6 +322,19 @@ class ASTReturnNode(ASTNode):
         self.name = "ASTReturnNode"
         self.expression = expression
         self.line_number = line_number
+
+    def accept(self, visitor):
+        
+        """
+    
+        Accepts a visitor and calls the visit_return_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+    
+        """
+    
+        return visitor.visit_return_node(self)
 
 class ASTDelayNode(ASTNode):
 
@@ -481,7 +490,7 @@ class ASTFunctionNode(ASTNode):
 
     def __init__(self, name, parameters, return_type, body, line_number):
         self.name = "ASTFunctionNode"
-        self.name = name
+        self.func_name = name
         self.parameters = parameters
         self.return_type = return_type
         self.body = body
