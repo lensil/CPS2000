@@ -18,14 +18,15 @@ class SymbolType(Enum):
 
 class ScopeType(Enum):
     
-        """
+    """
         
-            The type of the scope.
+        The type of the scope.
             
-        """
-        GLOBAL = 1
-        BLOCK = 2
-        FUNCTION = 3
+    """
+
+    GLOBAL = 1
+    BLOCK = 2
+    FUNCTION = 3
 
 class Symbol:
 
@@ -35,13 +36,12 @@ class Symbol:
 
     """
 
-    def __init__(self, symbol_type,line, value=None, params=None):
+    def __init__(self, symbol_type, line, type=None, value=None, params=None):
         self.symbol_type = symbol_type # The type of the sumbol (variable or function)
         self.value = value # The value of the symbol (if the symbol is a variable)
         self.params = params # The parameters of the function (if the symbol is a function)
         self.line = line # The line number of the symbol
-        self.type = None # The type of the variable/return type of the function
-
+        self.type = type # The type of the variable/return type of the function
 
 class SymbolTable:
     
@@ -90,14 +90,28 @@ class SymbolTable:
 
         self.scopes[-1][name] = symbol
 
-    def lookup(self, name):
+    def lookup(self, name, scope_type):
 
         """
 
             Looks up a symbol in the symbol table.
 
+            Parameters:
+                name: The name of the symbol to look up.
+
+            Returns:
+                The symbol if it exists, None otherwise.
+
         """
+
+        # If the scope type is function, only look in the current scope
+        if scope_type == ScopeType.FUNCTION:
+            if name in scope and scope[name].symbol_type == SymbolType.FUNCTION:
+                return scope[name]
+            else: 
+                return None
         
+        # If the scope type is block, look in the current scope and all the scopes above it
         for scope in reversed(self.scopes):
             if name in scope:
                 return scope[name]
@@ -131,6 +145,19 @@ class SymbolTable:
         """
 
         return self.scope_types[-1] == ScopeType.FUNCTION
+    
+    def is_global_scope(self):
+        
+        """
+    
+            Checks if the current scope is a global scope or not.
+    
+            Returns:
+                True if the current scope is a global scope, False otherwise.
+    
+        """
+
+        return self.scope_types[-1] == ScopeType.GLOBAL
     
     def get_type(self, name):
             
@@ -169,3 +196,4 @@ class SymbolTable:
         if symbol is not None:
             return symbol.line
         return None
+    

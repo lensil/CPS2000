@@ -36,6 +36,18 @@ class ASTProgramNode(ASTNode):
         """
         self.statements.append(statement)
 
+    def accept(self, visitor):
+        
+        """
+        
+        Accepts a visitor and calls the visit_program_node method on the visitor.
+
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+        
+        """
+        return visitor.visit_program_node(self)
+
 class ASTExpressionNode(ASTNode):
 
     """
@@ -50,9 +62,9 @@ class ASTExpressionNode(ASTNode):
 
     def __init__(self, line_number):
         self.name = "ASTExpressionNode" 
-        self.type = None
+        self.cast_expr = None
         self.line_number = line_number
-
+ 
     def add_type(self, type):
 
         """
@@ -63,8 +75,8 @@ class ASTExpressionNode(ASTNode):
             type (str): The type to add to the expression node.
         
         """
-        self.type = type
-
+        
+        self.cast_expr = type
 
 class ASTLiteralNode(ASTExpressionNode):
 
@@ -78,11 +90,25 @@ class ASTLiteralNode(ASTExpressionNode):
         line_number (int): The line number in the source code where the literal node is located.
     
     """
+
     def __init__(self, type, val, line_number):
         self.name = "ASTLiteralNode"
         self.type = type
         self.val = val
         self.line_number = line_number   
+
+    def accept(self, visitor):
+            
+        """
+            
+        Accepts a visitor and calls the visit_literal_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+            
+        """
+
+        return visitor.visit_literal_node(self)
 
 class ASTVariableNode(ASTExpressionNode):
     
@@ -100,6 +126,18 @@ class ASTVariableNode(ASTExpressionNode):
         self.name = "ASTVariableNode"
         self.var_name = name
         self.line_number = line_number
+
+    def accept (self, visitor):
+        
+        """
+        
+        Accepts a visitor and calls the visit_variable_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+        
+        """
+        return visitor.visit_variable_node(self)
 
 class ASTUnaryNode(ASTExpressionNode):
         
@@ -120,6 +158,19 @@ class ASTUnaryNode(ASTExpressionNode):
         self.expression = expression
         self.line_number = line_number
 
+    def accept(self, visitor):
+            
+        """
+            
+        Accepts a visitor and calls the visit_unary_node method on the visitor.
+        
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+            
+        """
+            
+        return visitor.visit_unary_node(self)
+
 class ASTRandomNode(ASTExpressionNode):
         
     """
@@ -137,6 +188,18 @@ class ASTRandomNode(ASTExpressionNode):
         self.expression = expression
         self.line_number = line_number
 
+    def accept(self, visitor):
+            
+        """
+            
+        Accepts a visitor and calls the visit_random_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+    
+        """
+    
+        return visitor.visit_random_node(self)
 
 class ASTReadNode(ASTExpressionNode):
             
@@ -176,8 +239,7 @@ class ASTFunctionCallNode(ASTExpressionNode):
         self.parameters = parameters
         self.line_number = line_number
 
-
-class ASTBinaryOpNode(ASTNode):
+class ASTBinaryOpNode(ASTExpressionNode):
 
     """
     
@@ -197,6 +259,19 @@ class ASTBinaryOpNode(ASTNode):
         self.op = op
         self.line_number = line_number
 
+    def accept(self, visitor):
+            
+        """
+    
+        Accepts a visitor and calls the visit_binary_op_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+    
+        """
+    
+        return visitor.visit_binary_op_node(self)
+
 class ASTVarDecNode(ASTNode):
 
     """
@@ -215,8 +290,21 @@ class ASTVarDecNode(ASTNode):
         self.name = "ASTVarDecNode"
         self.var_name = var_name
         self.var_type = var_type
-        self.val_expression = var_expression
+        self.var_expression = var_expression
         self.line_number = line_number
+
+    def accept(self, visitor):
+
+        """
+
+        Accepts a visitor and calls the visit_var_dec_node method on the visitor.
+
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+
+        """
+
+        visitor.visit_var_dec_node(self)
 
 class ASTReturnNode(ASTNode):
 
@@ -235,6 +323,19 @@ class ASTReturnNode(ASTNode):
         self.expression = expression
         self.line_number = line_number
 
+    def accept(self, visitor):
+        
+        """
+    
+        Accepts a visitor and calls the visit_return_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+    
+        """
+    
+        return visitor.visit_return_node(self)
+
 class ASTDelayNode(ASTNode):
 
     """
@@ -251,6 +352,19 @@ class ASTDelayNode(ASTNode):
         self.name = "ASTDelayNode"
         self.expression = expression
         self.line_number = line_number
+
+    def accept(self, visitor):
+            
+        """
+            
+        Accepts a visitor and calls the visit_delay_node method on the visitor.
+        
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+            
+        """
+            
+        return visitor.visit_delay_node(self)
 
 class ASTWriteNode(ASTNode):
 
@@ -272,6 +386,20 @@ class ASTWriteNode(ASTNode):
         self.expression_2 = expression_2
         self.expression_3 = expression_3
         self.line_number = line_number
+
+
+    def accept(self, visitor):
+            
+        """
+            
+        Accepts a visitor and calls the visit_write_node method on the visitor.
+        
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+            
+        """
+            
+        return visitor.visit_write_node(self)
 
 class ASTWriteBoxNode(ASTNode):
 
@@ -295,6 +423,19 @@ class ASTWriteBoxNode(ASTNode):
         self.expression_3 = expression_3
         self.expression_4 = expression_4
         self.line_number = line_number
+
+    def accept(self, visitor):
+        
+        """
+        
+        Accepts a visitor and calls the visit_write_box_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+        
+        """
+        
+        return visitor.visit_write_box_node(self)
 
 class ASTPrintNode(ASTNode):
 
@@ -349,7 +490,7 @@ class ASTFunctionNode(ASTNode):
 
     def __init__(self, name, parameters, return_type, body, line_number):
         self.name = "ASTFunctionNode"
-        self.name = name
+        self.func_name = name
         self.parameters = parameters
         self.return_type = return_type
         self.body = body
@@ -385,6 +526,19 @@ class ASTBlockNode(ASTNode):
         
         self.statements.append(statement)
 
+    def accept(self, visitor):
+            
+        """
+            
+        Accepts a visitor and calls the visit_block_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+            
+        """
+
+        return visitor.visit_block_node(self)
+
 class ASTAssignmentNode(ASTNode):
 
     """
@@ -402,6 +556,19 @@ class ASTAssignmentNode(ASTNode):
         self.identifier = identifier
         self.expression = expression
         self.line_number = line_number
+
+    def accept(self, visitor):
+
+        """
+
+        Accepts a visitor and calls the visit_assignment_node method on the visitor.
+
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+
+        """
+
+        return visitor.visit_assignment_node(self)
 
 class ASTIfNode(ASTNode):
 
