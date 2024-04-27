@@ -16,10 +16,8 @@ class SemanticAnalysisVisitor(ASTVisitor):
         self.symbol_table = SymbolTable() # Symbol table used for type checking
 
         self.current_function_name = None # Name of the current function being visited
-
-        # List of function calls that are not matched with a function definition yet
-        # Used for the case when a function is called before it is defined
-        self.unmatched_function_calls = [] 
+        
+        self.returns = False # Flag to check if a return statement is present in the function
 
     def visit_program_node(self, node):
 
@@ -46,15 +44,17 @@ class SemanticAnalysisVisitor(ASTVisitor):
                 
             """
 
-            # Push a new scope onto the symbol table
-            self.symbol_table.push_scope(ScopeType.BLOCK) 
+            if not self.symbol_table.is_function_scope():
+                # Push a new scope onto the symbol table
+                self.symbol_table.push_scope(ScopeType.BLOCK) 
     
             # Visit each statement in the block
             for statement in node.statements:
                 statement.accept(self)
 
-            # Pop the scope off the symbol table
-            self.symbol_table.pop_scope()
+            if not self.symbol_table.is_function_scope():
+                # Pop the scope off the symbol table
+                self.symbol_table.pop_scope()
 
     def visit_literal_node(self, node):
             
@@ -143,13 +143,13 @@ class SemanticAnalysisVisitor(ASTVisitor):
         
         # Visit the child
         line = node.line_number
-        child_type = node.child.accept(self)
+        expr_type = node.expression.accept(self)
         
         # Check if the type is compatible
-        if child_type not in ["int", "float"]:
+        if expr_type != "bool":
             raise Exception("Invalid type for unary operation on line ", line)
         
-        return child_type
+        return expr_type
     
     def visit_assignment_node(self, node):
             
@@ -190,6 +190,14 @@ class SemanticAnalysisVisitor(ASTVisitor):
             
         """
 
+        if self.current_function_name is not None:
+            parameters = self.symbol_table.get_params(self.current_function_name)
+            for param in parameters:
+                if param["name"] == node.var_name:
+                    return param["type"]
+                else:
+                    raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
+
         var_type = self.symbol_table.get_type(node.var_name)
 
         if var_type is None:
@@ -213,8 +221,17 @@ class SemanticAnalysisVisitor(ASTVisitor):
         line = node.line_number
         type = node.var_type.value
         expr_type = node.var_expression.accept(self)
+
+        if self.current_function_name is not None:
+            parameters = self.symbol_table.get_params(self.current_function_name)
+            for param in parameters:
+                if param["name"] == name:
+                    raise Exception("Variable name clashes with parameter name on line ", line, ": ", name)
+                
+                
         if self.symbol_table.is_declared(name):
             raise Exception("Identifier already declared on line ", line, ": ", name)
+        
         if type != expr_type:
             raise Exception("Type mismatch in declaration on line ", line, ". Expected ", type, ", got ", expr_type)
         symbol = Symbol(SymbolType.VARIABLE, line, type, name)
@@ -372,31 +389,22 @@ class SemanticAnalysisVisitor(ASTVisitor):
 
         # Check if the function is defined
         if not self.symbol_table.is_declared(function_name):
-
-            # If the function is not declared, add it to the list of unmatched function calls
-            function_call = {
-                "name": function_name,
-                "line": line,
-                "parameters": parameters,
-            }
-
-            self.unmatched_function_calls.append(function_call)
-            return None
+            raise Exception("Function not declared on line ", line, ": ", function_name)
         
         # Get the function definition from the symbol table
-        function_symbol = self.symbol_table.get_symbol(function_name)
+        function_symbol = self.symbol_table.lookup(function_name, self.symbol_table.get_current_scope_type)
 
         # Check if the number of parameters match
-        if len(parameters) != len(function_symbol.parameters):
-            raise Exception("Number of parameters do not match in function call on line ", line, ". Expected ", len(function_symbol.parameters), ", got ", len(parameters))
+        if len(parameters) != len(function_symbol.params):
+            raise Exception("Number of parameters do not match in function call on line ", line, ". Expected ", len(function_symbol.params), ", got ", len(parameters))
         
         # Check if the types of the parameters match
         for i in range(len(parameters)):
             param_type = parameters[i].accept(self)
-            if param_type != function_symbol.parameters[i]["type"]:
-                raise Exception("Type mismatch in function call on line ", line, ". Expected ", function_symbol.parameters[i], ", got ", param_type)
+            if param_type != function_symbol.params[i]["type"]:
+                raise Exception("Type mismatch in function call on line ", line, ". Expected ", function_symbol.params[i]["type"], ", got ", param_type)
             
-        return function_symbol.return_type
+        return function_symbol.type
 
     def visit_function_node(self, node):
         
@@ -409,14 +417,14 @@ class SemanticAnalysisVisitor(ASTVisitor):
                 
         """
 
-        name = node.function_name
+        name = node.func_name.value
         func_parameters = []
         
         for param in node.parameters:
             parameter = param.accept(self)
             if (parameter["name"], parameter["type"]) in func_parameters:
                 raise Exception("Duplicate parameter in function declaration on line ", node.line_number, ": ", parameter["name"])
-            func_parameters.append((parameter["name"], parameter["type"]))
+            func_parameters.append(parameter)
 
         return_type = node.return_type.value
 
@@ -424,7 +432,7 @@ class SemanticAnalysisVisitor(ASTVisitor):
         if self.symbol_table.is_declared(name):
             raise Exception("Function already declared on line ", node.line_number, ": ", name)
         
-        if not self.symbol_table.is_global_scope():
+        if self.symbol_table.is_function_scope():
             raise Exception("Function declaration inside a function on line ", node.line_number, ": ", name)
         
         symbol = Symbol(SymbolType.FUNCTION, node.line_number, return_type, name, func_parameters)
@@ -435,6 +443,10 @@ class SemanticAnalysisVisitor(ASTVisitor):
         self.symbol_table.push_scope(ScopeType.FUNCTION)
         self.current_function_name = name
         node.body.accept(self)
+        
+        if not self.returns:
+            raise Exception("Function does not return a value on line ", node.line_number, ": ", name)
+        
         self.current_function_name = None
         self.symbol_table.pop_scope()
 
@@ -452,8 +464,8 @@ class SemanticAnalysisVisitor(ASTVisitor):
                 
         """
 
-        name = node.var_name.var_name
-        type = node.var_type.value
+        name = node.var_name.value
+        type = node.type.value
     
         # Return the name and type of the parameter
         return {"name": name, "type": type}
@@ -490,18 +502,28 @@ class SemanticAnalysisVisitor(ASTVisitor):
                 
         """
 
+        if self.current_function_name is not None:
+            self.returns = False
+
         # Visit the condition and block
         line = node.line_number
         condition_type = node.condition.accept(self)
-        node.block.accept(self)
-        
+    
         # Check if the type is compatible
         if condition_type != "bool":
             raise Exception("Invalid type for if condition on line ", line, ". Expected bool, got ", condition_type)
         
         node.true_block.accept(self)
 
+        if self.current_function_name is not None and not self.returns: 
+            raise Exception("Function does not return a value on line ", line, ": ", self.current_function_name)
+        
+        
+        node.true_block.accept(self)
+
         if not node.false_block is None:
+            if self.current_function_name is not None:
+                self.returns = False
             node.false_block.accept(self)
 
     def visit_while_node(self, node):
@@ -538,13 +560,25 @@ class SemanticAnalysisVisitor(ASTVisitor):
 
         # Visit the start, end, and block
         line = node.line_number
-        start_type = node.init.accept(self)
+
+        if (node.init is not None):
+            start_type = node.init.accept(self)
         
+            # Check if the types are compatible
+            if start_type != "int":
+                raise Exception("Invalid initialization type for for loop on line ", line, ". Expected int, got ", start_type)
+            
+        condition_type = node.condition.accept(self)
+
+        # Check if the type is compatible
+        if condition_type != "bool":
+            raise Exception("Invalid condition type for for loop on line ", line, ". Expected bool, got ", condition_type)
+        
+        increment_type = node.increment.accept(self)
+
         # Check if the types are compatible
-        if start_type != "int":
-            raise Exception("Invalid initialization type for for loop on line ", line, ". Expected int, got ", start_type)
-        
-        node.increment.accept(self)
+        if increment_type != "int":
+            raise Exception("Invalid increment type for for loop on line ", line, ". Expected int, got ", increment_type)
 
         node.block.accept(self)
 
@@ -569,6 +603,8 @@ class SemanticAnalysisVisitor(ASTVisitor):
         
         func_name = self.current_function_name
 
+        self.returns = True
+
         if self.symbol_table.get_type(func_name) != expr_type:
             raise Exception("Type mismatch in return statement on line ", line, ". Expected ", self.symbol_table.get_type(func_name), ", got ", expr_type)
         
@@ -576,7 +612,8 @@ class SemanticAnalysisVisitor(ASTVisitor):
        
 # Testing the semantic analysis visitor
 # Test the parser
-src_program = "__write 1, 9.2, #12345;"
+src_program = "for (let x: float = 0.0; x < 10; x = x + 1) { __delay 6; }"
+
 parser = Parser(src_program)
 parser.Parse()
 parser.ASTroot.accept(SemanticAnalysisVisitor())

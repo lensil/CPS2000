@@ -169,7 +169,7 @@ class ASTUnaryNode(ASTExpressionNode):
             
         """
             
-        return visitor.visit_unary_node(self)
+        return visitor.visit_unary_op_node(self)
 
 class ASTRandomNode(ASTExpressionNode):
         
@@ -220,6 +220,19 @@ class ASTReadNode(ASTExpressionNode):
         self.right_expression = right_expression
         self.line_number = line_number
 
+    def accept(self, visitor):
+                
+        """
+                
+        Accepts a visitor and calls the visit_read_node method on the visitor.
+        
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+        
+        """
+        
+        return visitor.visit_read_node(self)
+
 class ASTFunctionCallNode(ASTExpressionNode):
 
     """
@@ -238,6 +251,19 @@ class ASTFunctionCallNode(ASTExpressionNode):
         self.function_name = function_name
         self.parameters = parameters
         self.line_number = line_number
+
+    def accept(self, visitor):
+        
+        """
+        
+        Accepts a visitor and calls the visit_function_call_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+        
+        """
+        
+        return visitor.visit_function_call_node(self)
 
 class ASTBinaryOpNode(ASTExpressionNode):
 
@@ -304,7 +330,7 @@ class ASTVarDecNode(ASTNode):
 
         """
 
-        visitor.visit_var_dec_node(self)
+        return visitor.visit_var_dec_node(self)
 
 class ASTReturnNode(ASTNode):
 
@@ -454,6 +480,19 @@ class ASTPrintNode(ASTNode):
         self.expression = expression
         self.line_number = line_number
 
+    def accept(self, visitor):
+            
+        """
+            
+        Accepts a visitor and calls the visit_print_node method on the visitor.
+        
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+            
+        """
+            
+        return visitor.visit_print_node(self)
+
 class ASTFormalParameterNode(ASTNode):
 
     """
@@ -469,9 +508,22 @@ class ASTFormalParameterNode(ASTNode):
 
     def __init__(self, name, type, line_number):
         self.name = "ASTFormalParameterNode"
-        self.name = name
+        self.var_name = name
         self.type = type
         self.line_number = line_number
+
+    def accept(self, visitor):
+        
+        """
+        
+        Accepts a visitor and calls the visit_formal_parameter_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+        
+        """
+        
+        return visitor.visit_formal_parameter_node(self)
 
 class ASTFunctionNode(ASTNode):
 
@@ -495,6 +547,19 @@ class ASTFunctionNode(ASTNode):
         self.return_type = return_type
         self.body = body
         self.line_number = line_number
+
+    def accept(self, visitor):
+
+        """
+        
+        Accepts a visitor and calls the visit_function_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+        
+        """
+        
+        return visitor.visit_function_node(self)
 
 class ASTBlockNode(ASTNode):
     
@@ -591,6 +656,19 @@ class ASTIfNode(ASTNode):
         self.false_block = false_block
         self.line_number = line_number
 
+    def accept(self, visitor):
+
+        """
+        
+        Accepts a visitor and calls the visit_if_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+        
+        """
+        
+        return visitor.visit_if_node(self)
+
 class ASTWhileNode(ASTNode):
     
     """
@@ -609,6 +687,19 @@ class ASTWhileNode(ASTNode):
         self.condition = condition
         self.block = block
         self.line_number = line_number
+
+    def accept(self, visitor):
+
+        """
+        
+        Accepts a visitor and calls the visit_while_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+        
+        """
+        
+        return visitor.visit_while_node(self)
 
 class ASTForNode(ASTNode):
 
@@ -632,3 +723,16 @@ class ASTForNode(ASTNode):
         self.increment = increment
         self.block = block
         self.line_number = line_number
+
+    def accept(self, visitor):
+
+        """
+        
+        Accepts a visitor and calls the visit_for_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+        
+        """
+        
+        return visitor.visit_for_node(self)

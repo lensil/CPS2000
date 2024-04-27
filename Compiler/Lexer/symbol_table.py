@@ -42,6 +42,8 @@ class Symbol:
         self.params = params # The parameters of the function (if the symbol is a function)
         self.line = line # The line number of the symbol
         self.type = type # The type of the variable/return type of the function
+        self.frame_index = None  # Keeps track of the index of the variable in the frame
+        self.frame_level = None  # Keeps track of the level of the frame
 
 class SymbolTable:
     
@@ -106,8 +108,8 @@ class SymbolTable:
 
         # If the scope type is function, only look in the current scope
         if scope_type == ScopeType.FUNCTION:
-            if name in scope and scope[name].symbol_type == SymbolType.FUNCTION:
-                return scope[name]
+            if name in self.scopes[-2] and self.scopes[-2][name].symbol_type == SymbolType.FUNCTION:
+                return self.scopes[-2][name]
             else: 
                 return None
         
@@ -117,7 +119,7 @@ class SymbolTable:
                 return scope[name]
         return None
     
-    def is_declared(self, name):
+    def is_declared(self, name, scope_type=ScopeType.BLOCK):
 
         """
 
@@ -131,7 +133,7 @@ class SymbolTable:
 
         """
 
-        return self.lookup(name) is not None
+        return self.lookup(name, scope_type) is not None
     
     def is_function_scope(self):
             
@@ -159,7 +161,7 @@ class SymbolTable:
 
         return self.scope_types[-1] == ScopeType.GLOBAL
     
-    def get_type(self, name):
+    def get_type(self, name, scope_type=ScopeType.BLOCK):
             
         """
     
@@ -173,7 +175,7 @@ class SymbolTable:
     
         """
     
-        symbol = self.lookup(name)
+        symbol = self.lookup(name, self.get_current_scope_type)
         if symbol is not None:
             return symbol.type
         return None
@@ -197,3 +199,94 @@ class SymbolTable:
             return symbol.line
         return None
     
+    def get_params(self, name):
+            
+            """
+        
+                Returns the parameters of a function.
+    
+                Parameters:
+                    name: The name of the function.
+    
+                Returns:
+                    The parameters of the function if it exists, None otherwise.
+        
+            """
+        
+            symbol = self.lookup(name, ScopeType.FUNCTION)
+            if symbol is not None:
+                return symbol.params
+            return None
+
+    def get_current_scope_type(self):
+        
+        """
+    
+            Returns the type of the current scope.
+    
+            Returns:
+                The type of the current scope.
+    
+        """
+
+        return self.scope_types[-1]
+    
+    def get_current_frame_level(self):
+
+        """
+    
+            Returns the level of the current frame.
+    
+            Returns:
+                The level of the current frame.
+    
+        """
+
+        return len(self.scopes) - 1
+    
+    def get_curent_frame_index(self):
+
+        """
+    
+            Returns the index of the current frame.
+    
+            Returns:
+                The index of the current frame.
+    
+        """
+
+        return len(self.scopes[-1])
+    
+    def set_location(self, name, frame_index, frame_level):
+        
+        """
+    
+            Sets the location of a variable in the frame.
+    
+            Parameters:
+                name: The name of the variable.
+                frame_index: The index of the variable in the frame.
+                frame_level: The level of the frame.
+    
+        """
+
+        symbol = self.lookup(name)
+        symbol.frame_index = frame_index
+        symbol.frame_level = frame_level
+
+    def get_location(self, name):
+
+        """
+    
+            Gets the location of a variable in the frame.
+    
+            Parameters:
+                name: The name of the variable.
+    
+            Returns:
+                The index of the variable in the frame.
+    
+        """
+
+        symbol = self.lookup(name)
+        return symbol.frame_index, symbol.frame_level
