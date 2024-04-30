@@ -437,7 +437,14 @@ class Parser:
 
             expression_4 = self.parse_expression() # Parse the expression
 
-            write_node = ast.ASTWriteBoxNode(expression_1, expression_2, expression_3, expression_4, line) # Create a write box node
+            if self.crtToken.TokenType != TokenType.COMMA: # Check if the next token is a comma 
+                raise Exception("Expected ',' after write expression on line ", self.crtToken.line)
+
+            self.advance() # Advance to the next token
+
+            expression_5 = self.parse_expression() # Parse the expression
+
+            write_node = ast.ASTWriteBoxNode(expression_1, expression_2, expression_3, expression_4, expression_5, line) # Create a write box node
 
         else :
             raise Exception("Invalid write statement on line ", self.crtToken.line)
@@ -727,18 +734,16 @@ class Parser:
         """
     
         self.advance()
-        block = ast.ASTBlockNode([], self.crtToken.line)
         while self.crtToken.TokenType != lexer.TokenType.EOF:
             statement = self.parse_statement()
-            block.statements.append(statement)
-        self.ASTroot.add_statement(block) # Add the block to the AST program node
+            self.ASTroot.add_statement(statement)
         return self.ASTroot
     
     def Parse(self):        
         self.ASTroot = self.parse_program()
 
 # Test the parser
-src_program = "let x: bool = 5; "
+src_program = "__write_box 0, 0, 10, 10, #FFC0CB;"
 parser = Parser(src_program)
 parser.Parse()
 print(parser.ASTroot)

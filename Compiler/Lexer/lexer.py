@@ -1,4 +1,9 @@
 # Lexer Implementation
+"""
+
+Lexer class
+
+"""
 from dfa import DFA, input_categories
 from tokens import Token, token_type_by_final_state, TokenType
 
@@ -139,3 +144,11 @@ class Lexer:
 
         tokens_list.append(token)   
         return tokens_list # Return the list of tokens
+    
+# Test the Lexer
+if __name__ == "__main__":
+    lexer = Lexer()
+    src_program_str = "__write_box 0, 0, 10, 10, #FFC0CB;"
+    tokens_list = lexer.generate_tokens(src_program_str)
+    for token in tokens_list:
+        print(token.TokenType, token.value, token.line)

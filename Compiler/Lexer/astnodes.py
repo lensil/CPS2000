@@ -438,16 +438,18 @@ class ASTWriteBoxNode(ASTNode):
         expression_2 (ASTExpressionNode): The second expression to write.
         expression_3 (ASTExpressionNode): The third expression to write.
         expression_4 (ASTExpressionNode): The fourth expression to write.
+        expression_5 (ASTExpressionNode): The fifth expression to write.
         line_number (int): The line number in the source code where the write box node is located.
     
     """
 
-    def __init__(self, expression_1, expression_2, expression_3, expression_4, line_number):
+    def __init__(self, expression_1, expression_2, expression_3, expression_4, expression_5, line_number):
         self.name = "ASTWriteBoxNode"
         self.expression_1 = expression_1
         self.expression_2 = expression_2
         self.expression_3 = expression_3
         self.expression_4 = expression_4
+        self.expression_5 = expression_5
         self.line_number = line_number
 
     def accept(self, visitor):

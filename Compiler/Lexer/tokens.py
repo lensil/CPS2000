@@ -231,7 +231,7 @@ def token_type_by_final_state(final_state, lexeme, line):
             return Token(TokenType.INT_LITERAL, lexeme, line)
         case 20:
             return Token(TokenType.FLOAT_LITERAL, lexeme, line)
-        case 26:
+        case 27:
             return Token(TokenType.COLOR_LITERAL, lexeme, line)
         case _:
             return Token(TokenType.ERROR, lexeme, line)

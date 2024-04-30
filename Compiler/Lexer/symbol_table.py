@@ -56,6 +56,8 @@ class SymbolTable:
         self.scopes = []
         self.scope_types = []
         self.push_scope(ScopeType.GLOBAL) # Push the global scope
+        self.current_frame_level = 0
+        self.current_frame_index = 0
 
     def push_scope(self, scope_type):
 
@@ -71,6 +73,12 @@ class SymbolTable:
         self.scopes.append({})
         self.scope_types.append(scope_type)
 
+        # If the scope type is not global, increment the frame level and reset the frame index
+        if scope_type != ScopeType.GLOBAL:  
+            self.current_frame_level += 1
+            self.current_frame_index = 0
+
+
     def pop_scope(self):
 
         """
@@ -82,6 +90,9 @@ class SymbolTable:
         self.scopes.pop()
         self.scope_types.pop()
 
+        if self.get_current_scope_type() != ScopeType.GLOBAL:  # Don't decrement frame level for global scope
+            self.current_frame_level -= 1
+
     def add_symbol(self, name, symbol):
 
         """
@@ -89,7 +100,7 @@ class SymbolTable:
             Adds a symbol to the current scope.
 
         """
-
+        self.assign_memory_location(symbol)
         self.scopes[-1][name] = symbol
 
     def lookup(self, name, scope_type):
@@ -290,3 +301,17 @@ class SymbolTable:
 
         symbol = self.lookup(name)
         return symbol.frame_index, symbol.frame_level
+    
+    def assign_memory_location(self, symbol):
+        """
+        
+            Assigns a memory location to a variable.
+            
+            Parameters:
+                symbol: The symbol to assign a memory location to.
+                
+        """
+
+        symbol.frame_index = self.current_frame_index
+        symbol.frame_level = self.current_frame_level
+        self.current_frame_index += 1
