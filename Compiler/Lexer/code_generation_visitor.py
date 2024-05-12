@@ -2,6 +2,8 @@ from visitor import ASTVisitor
 from symbol_table import SymbolTable, ScopeType, Symbol, SymbolType
 from parser_testing import *
 
+# To do: increase size of frame if needed
+
 class CodeGenerationVisitor(ASTVisitor):
 
     def __init__(self, output_file):
@@ -9,25 +11,28 @@ class CodeGenerationVisitor(ASTVisitor):
         self.current_function_name = None # Current function name being visited
         self.returns = False # Flag to check if function returns a value
         self.output_file = open(output_file, "w") # Output file of where the generated code will be written
-        self.output_string = "" # Output string where the generated code will be written
+        self.output = [] # List of strings to be written to the output file
         self.current_block_length = 0 # Length of the current block
     # Done
     def visit_program_node(self, node):
-        self.output_file.write(".main\n") # Write the main function header
-        self.output_file.write("push 4\n") # Call the main function
-        self.output_file.write("jmp\n") 
-        self.output_file.write("halt\n") 
-        self.output_file.write("push " + str(len(node.statements)) + "\n") # Push the number of statements onto the stack
-        self.output_file.write("oframe\n") # Open the frame
+        self.output.append(".main\n") 
+        self.output.append("push 4\n")
+        self.output.append("jmp\n")
+        self.output.append("halt\n")
+        self.output.append("push " + str(len(node.statements)) + "\n")
+        self.output.append("oframe\n")
         for statement in node.statements:
             statement.accept(self)
+
+        for line in self.output:
+            self.output_file.write(line)
 
         self.output_file.close() # Close the output file
     
     # Done
     def visit_block_node(self, node):
-        self.output_file.write("push " + str(len(node.statements)) + "\n") # Push the number of statements onto the stack
-        self.output_file.write("oframe\n") # Open the frame
+        self.output.append("push " + str(len(node.statements)) + "\n") # Push the number of statements onto the stack
+        self.output.append("oframe\n") # Open the frame
         
         if not self.symbol_table.is_function_scope():
             self.symbol_table.push_scope(ScopeType.BLOCK) 
@@ -38,7 +43,7 @@ class CodeGenerationVisitor(ASTVisitor):
         if not self.symbol_table.is_function_scope():
             self.symbol_table.pop_scope()
 
-        self.output_file.write("cframe\n") # Close the frame
+        self.output.append("cframe\n") # Close the frame
         self.current_block_length += 3
 
     # Done
@@ -47,12 +52,12 @@ class CodeGenerationVisitor(ASTVisitor):
         self.current_block_length += 1
 
         if node.type == TokenType.INT_LITERAL or node.type == TokenType.FLOAT_LITERAL or node.type == TokenType.COLOR_LITERAL:
-            self.output_file.write("push " + str(node.val) + "\n") # Push the literal value onto the stack
+            self.output.append("push " + str(node.val) + "\n") # Push the literal value onto the stack
         elif node.type == TokenType.BOOL_LITERAL:
             if node.val == "true":
-                self.output_file.write("push 1\n")
+                self.output.append("push 1\n")
             else:
-                self.output_file.write("push 0\n")
+                self.output.append("push 0\n")
 
         node_type = node.type
         if node_type == TokenType.INT_LITERAL:
@@ -82,13 +87,13 @@ class CodeGenerationVisitor(ASTVisitor):
             if left_type != "int" and left_type != "float":
                 raise Exception("Invalid type for arithmetic operation on line ", line, ". Expected int or float, got ", left_type)
             if operator == '+':
-                self.output_file.write("add\n")
+                self.output.append("add\n")
             elif operator == '-':
-                self.output_file.write("sub\n")
+                self.output.append("sub\n")
             elif operator == '*':
-                self.output_file.write("mul\n")
+                self.output.append("mul\n")
             elif operator == '/':
-                self.output_file.write("div\n")
+                self.output.append("div\n")
             return left_type
     
         
@@ -101,22 +106,22 @@ class CodeGenerationVisitor(ASTVisitor):
             if left_type != "int" and left_type != "float":
                 raise Exception("Invalid type for comparison operation on line ", line, ". Expected int or float, got ", left_type)
             if operator == '<':
-                self.output_file.write("lt\n")
+                self.output.append("lt\n")
             elif operator == '>':
-                self.output_file.write("gt\n")
+                self.output.append("gt\n")
             elif operator == '<=':
-                self.output_file.write("le\n")
+                self.output.append("le\n")
             elif operator == '>=':
-                self.output_file.write("ge\n")
+                self.output.append("ge\n")
             return "bool"
         
 
         if operator in ['==', '!=']:
             if operator == '==':
-                self.output_file.write("eq\n")
+                self.output.append("eq\n")
             elif operator == '!=':
-                self.output_file.write("eq\n")
-                self.output_file.write("not\n")
+                self.output.append("eq\n")
+                self.output.append("not\n")
             return "bool"
         
 
@@ -129,6 +134,7 @@ class CodeGenerationVisitor(ASTVisitor):
                 self.output_file.write("or\n")
             return "bool"
 
+        self.current_block_length += 1
         return left_type
 
     # Done
@@ -137,10 +143,12 @@ class CodeGenerationVisitor(ASTVisitor):
         line = node.line_number
         expr_type = node.expression.accept(self)
 
-        self.output_file.write("not\n")
+        self.output.append("not\n")
 
         if expr_type != "bool":
             raise Exception("Invalid type for unary operation on line ", line)
+        
+        self.current_block_length += 1
 
         return expr_type
 
@@ -188,9 +196,9 @@ class CodeGenerationVisitor(ASTVisitor):
                 if param["name"] == name:
                     raise Exception("Variable name clashes with parameter name on line ", line, ": ", name)
 
-        self.output_file.write("push " + str(self.symbol_table.current_frame_index ) + "\n")
-        self.output_file.write("push " + str(0) + "\n")
-        self.output_file.write("st\n")
+        self.output.append("push " + str(self.symbol_table.current_frame_index ) + "\n")
+        self.output.append("push " + str(0) + "\n")
+        self.output.append("st\n")
         if self.symbol_table.is_declared(name):
             raise Exception("Identifier already declared on line ", line, ": ", name)
         
@@ -200,10 +208,14 @@ class CodeGenerationVisitor(ASTVisitor):
         symbol = Symbol(SymbolType.VARIABLE, line, type, name)
         self.symbol_table.add_symbol(name, symbol)
 
+        self.current_block_length += 3
+
         return type
 
     # Done
     def visit_random_node(self, node):
+
+        self.current_block_length += 1
 
         line = node.line_number
         expr_type = node.expression.accept(self)
@@ -211,12 +223,14 @@ class CodeGenerationVisitor(ASTVisitor):
         if expr_type != "int":
             raise Exception("Invalid type for random operation on line ", line)
         
-        self.output_file.write("irnd\n")
+        self.output.append("irnd\n")
 
         return expr_type
 
     # Done
     def visit_delay_node(self, node):
+
+        self.current_block_length += 1
 
         line = node.line_number
         expr_type = node.expression.accept(self)
@@ -224,12 +238,14 @@ class CodeGenerationVisitor(ASTVisitor):
         if expr_type != "int" and expr_type != "float":
             raise Exception("Invalid type for delay operation on line ", line, ". Expected int or float, got ", expr_type)
         
-        self.output_file.write("delay\n")
+        self.output.append("delay\n")
 
         return expr_type
 
     # Done
     def visit_write_node(self, node):
+
+        self.current_block_length += 1
 
         line = node.line_number
         expr3_type = node.expression_3.accept(self)
@@ -246,12 +262,14 @@ class CodeGenerationVisitor(ASTVisitor):
         if expr3_type != "color":
             raise Exception("Expected color for third argument of write on line ", line, ", got ", expr3_type)
         
-        self.output_file.write("write\n")
+        self.output.append("write\n")
 
         return expr1_type
 
     # Done
     def visit_write_box_node(self, node):
+
+        self.current_block_length += 1
 
         line = node.line_number
         expr5_type = node.expression_5.accept(self)
@@ -275,7 +293,7 @@ class CodeGenerationVisitor(ASTVisitor):
         if expr5_type != "color":
             raise Exception("Expected color for fifth argument of write_box on line ", line, ", got ", expr5_type)
         
-        self.output_file.write("writebox\n")
+        self.output.append("write_box\n")
         
         return expr1_type
 
@@ -363,37 +381,30 @@ class CodeGenerationVisitor(ASTVisitor):
         if expr_type != "int" and expr_type != "float" and expr_type != "bool" and expr_type != "color":
             raise Exception("Invalid type for print operation on line ", line)
         
-        self.output_file.write("print\n")
+        self.output.append("print\n")
 
         self.current_block_length += 1
 
         return expr_type
 
+    # Done
     def visit_if_node(self, node):
         if self.current_function_name is not None:
             self.returns = False
 
         line = node.line_number
         condition_type = node.condition.accept(self)
+        self.output.append("not\n")
 
         if condition_type != "bool":
             raise Exception("Invalid type for if condition on line ", line, ". Expected bool, got ", condition_type)
 
-        
-        # First pass: Write the lines that you can, leaving placeholders for the others
-        current_position = self.output_file.tell()
-        self.output_file.write("push #PC+00000000000000000\n")  # Placeholder
-        self.output_file.write("cjmp \n")
+        self.output.append("push #PC+00000000000000000\n")  # Placeholder
+        index = len(self.output) - 1
+        self.output.append("cjmp\n")
         node.true_block.accept(self)
 
-# Calculate self.current_block_length here
-
-# Second pass: Replace the placeholder with the actual line
-        self.output_file.seek(current_position)
-        self.output_file.write("push #PC+" + str(self.current_block_length).zfill(17) + "\n")  # Make sure the length of the string is 17
-
-# Move the file pointer to the end
-        self.output_file.seek(0, 2)
+        self.output[index] = "push #PC+" + str(self.current_block_length) + "\n"
 
 
         if self.current_function_name is not None and not self.returns:
@@ -402,9 +413,15 @@ class CodeGenerationVisitor(ASTVisitor):
         if not node.false_block is None:
             if self.current_function_name is not None:
                 self.returns = False
-            self.output_file.write("push #PC+" + str(len(node.false_block.statements) + 1) + "\n")
-            self.output_file.write("jmp\n")
+            self.output[index] = "push #PC+" + str(self.current_block_length+3) + "\n"
+            self.current_block_length = 0
+            self.output.append("push #PC+00000000000000000\n")
+            index = len(self.output) - 1
+            self.output.append("jmp\n")
             node.false_block.accept(self)
+            self.output[index] = "push #PC+" + str(self.current_block_length+1) + "\n"
+        
+        self.current_block_length = 0
 
         return condition_type
 
@@ -457,8 +474,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         return expr_type
 
-src_program = "if (1 > 5) { __print 9; __print 9; __print 9;}"
-
+src_program = "if (true) { __print 1; } __print 3;"
 parser = Parser(src_program)
 parser.Parse()
 parser.ASTroot.accept(CodeGenerationVisitor(output_file="output.txt"))
