@@ -9,7 +9,8 @@ class CodeGenerationVisitor(ASTVisitor):
         self.current_function_name = None # Current function name being visited
         self.returns = False # Flag to check if function returns a value
         self.output_file = open(output_file, "w") # Output file of where the generated code will be written
-
+        self.output_string = "" # Output string where the generated code will be written
+        self.current_block_length = 0 # Length of the current block
     # Done
     def visit_program_node(self, node):
         self.output_file.write(".main\n") # Write the main function header
@@ -22,9 +23,12 @@ class CodeGenerationVisitor(ASTVisitor):
             statement.accept(self)
 
         self.output_file.close() # Close the output file
-
+    
+    # Done
     def visit_block_node(self, node):
-
+        self.output_file.write("push " + str(len(node.statements)) + "\n") # Push the number of statements onto the stack
+        self.output_file.write("oframe\n") # Open the frame
+        
         if not self.symbol_table.is_function_scope():
             self.symbol_table.push_scope(ScopeType.BLOCK) 
 
@@ -34,10 +38,21 @@ class CodeGenerationVisitor(ASTVisitor):
         if not self.symbol_table.is_function_scope():
             self.symbol_table.pop_scope()
 
+        self.output_file.write("cframe\n") # Close the frame
+        self.current_block_length += 3
+
     # Done
     def visit_literal_node(self, node):
 
-        self.output_file.write("push " + str(node.val) + "\n") # Push the literal value onto the stack
+        self.current_block_length += 1
+
+        if node.type == TokenType.INT_LITERAL or node.type == TokenType.FLOAT_LITERAL or node.type == TokenType.COLOR_LITERAL:
+            self.output_file.write("push " + str(node.val) + "\n") # Push the literal value onto the stack
+        elif node.type == TokenType.BOOL_LITERAL:
+            if node.val == "true":
+                self.output_file.write("push 1\n")
+            else:
+                self.output_file.write("push 0\n")
 
         node_type = node.type
         if node_type == TokenType.INT_LITERAL:
@@ -51,43 +66,78 @@ class CodeGenerationVisitor(ASTVisitor):
         else:
             return None
 
+    # Done
     def visit_binary_op_node(self, node):
 
         operator = node.op
         line = node.line_number
-        left_type = node.left.accept(self)
         right_type = node.right.accept(self)
+        left_type = node.left.accept(self)
 
         if left_type != right_type:
             raise Exception("Type mismatch in binary operation on line ", line, ". Expected ", left_type, ", got ", right_type)
 
+        # Mathematical operations
         if operator in ['+', '-', '*', '/']:
             if left_type != "int" and left_type != "float":
                 raise Exception("Invalid type for arithmetic operation on line ", line, ". Expected int or float, got ", left_type)
+            if operator == '+':
+                self.output_file.write("add\n")
+            elif operator == '-':
+                self.output_file.write("sub\n")
+            elif operator == '*':
+                self.output_file.write("mul\n")
+            elif operator == '/':
+                self.output_file.write("div\n")
             return left_type
+    
+        
 
         if not node.cast_expr is None:
             return node.cast_expr
 
+        # Comparison operations
         if operator in ['<', '>', '<=', '>=']:
             if left_type != "int" and left_type != "float":
                 raise Exception("Invalid type for comparison operation on line ", line, ". Expected int or float, got ", left_type)
+            if operator == '<':
+                self.output_file.write("lt\n")
+            elif operator == '>':
+                self.output_file.write("gt\n")
+            elif operator == '<=':
+                self.output_file.write("le\n")
+            elif operator == '>=':
+                self.output_file.write("ge\n")
             return "bool"
+        
 
         if operator in ['==', '!=']:
+            if operator == '==':
+                self.output_file.write("eq\n")
+            elif operator == '!=':
+                self.output_file.write("eq\n")
+                self.output_file.write("not\n")
             return "bool"
+        
 
         if operator in ['and', 'or']:
             if left_type != "bool":
                 raise Exception("Invalid type for logical operation on line ", line, ". Expected bool, got ", left_type)
+            if operator == 'and':
+                self.output_file.write("and\n")
+            elif operator == 'or':
+                self.output_file.write("or\n")
             return "bool"
 
         return left_type
 
+    # Done
     def visit_unary_op_node(self, node):
 
         line = node.line_number
         expr_type = node.expression.accept(self)
+
+        self.output_file.write("not\n")
 
         if expr_type != "bool":
             raise Exception("Invalid type for unary operation on line ", line)
@@ -315,10 +365,11 @@ class CodeGenerationVisitor(ASTVisitor):
         
         self.output_file.write("print\n")
 
+        self.current_block_length += 1
+
         return expr_type
 
     def visit_if_node(self, node):
-
         if self.current_function_name is not None:
             self.returns = False
 
@@ -328,18 +379,34 @@ class CodeGenerationVisitor(ASTVisitor):
         if condition_type != "bool":
             raise Exception("Invalid type for if condition on line ", line, ". Expected bool, got ", condition_type)
 
+        
+        # First pass: Write the lines that you can, leaving placeholders for the others
+        current_position = self.output_file.tell()
+        self.output_file.write("push #PC+00000000000000000\n")  # Placeholder
+        self.output_file.write("cjmp \n")
         node.true_block.accept(self)
 
-        if self.current_function_name is not None and not self.returns: 
+# Calculate self.current_block_length here
+
+# Second pass: Replace the placeholder with the actual line
+        self.output_file.seek(current_position)
+        self.output_file.write("push #PC+" + str(self.current_block_length).zfill(17) + "\n")  # Make sure the length of the string is 17
+
+# Move the file pointer to the end
+        self.output_file.seek(0, 2)
+
+
+        if self.current_function_name is not None and not self.returns:
             raise Exception("Function does not return a value on line ", line, ": ", self.current_function_name)
-
-
-        node.true_block.accept(self)
 
         if not node.false_block is None:
             if self.current_function_name is not None:
                 self.returns = False
+            self.output_file.write("push #PC+" + str(len(node.false_block.statements) + 1) + "\n")
+            self.output_file.write("jmp\n")
             node.false_block.accept(self)
+
+        return condition_type
 
     def visit_while_node(self, node):
 
@@ -390,7 +457,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         return expr_type
 
-src_program = "__write 0, 10, #FFC0CB;"
+src_program = "if (1 > 5) { __print 9; __print 9; __print 9;}"
 
 parser = Parser(src_program)
 parser.Parse()
