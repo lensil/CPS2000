@@ -13,6 +13,7 @@ class CodeGenerationVisitor(ASTVisitor):
         self.output_file = open(output_file, "w") # Output file of where the generated code will be written
         self.output = [] # List of strings to be written to the output file
         self.current_block_length = 0 # Length of the current block
+    
     # Done
     def visit_program_node(self, node):
         self.output.append(".main\n") 
@@ -74,6 +75,8 @@ class CodeGenerationVisitor(ASTVisitor):
     # Done
     def visit_binary_op_node(self, node):
 
+        self.current_block_length += 1
+
         operator = node.op
         line = node.line_number
         right_type = node.right.accept(self)
@@ -134,7 +137,6 @@ class CodeGenerationVisitor(ASTVisitor):
                 self.output_file.write("or\n")
             return "bool"
 
-        self.current_block_length += 1
         return left_type
 
     # Done
@@ -152,6 +154,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         return expr_type
 
+    # Done
     def visit_assignment_node(self, node):
 
         identifier_type = self.visit_variable_node(node.identifier)
@@ -163,6 +166,8 @@ class CodeGenerationVisitor(ASTVisitor):
         self.output.append("push "+ str(symbol.frame_index) + "\n")
         self.output.append("push "+ str(self.symbol_table.current_frame_level - symbol.frame_level) + "\n")
         self.output.append("st\n")
+
+        self.current_block_length += 3
 
         if identifier_type != expression_type:
             raise Exception("Type mismatch in assignment on line ", node.line_number, ". Expected ", identifier_type, ", got ", expression_type)
@@ -181,6 +186,8 @@ class CodeGenerationVisitor(ASTVisitor):
                     raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
 
         var_type = self.symbol_table.get_type(node.var_name)
+
+        self.current_block_length += 1
 
         if var_type is None:
             raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
@@ -303,17 +310,20 @@ class CodeGenerationVisitor(ASTVisitor):
         
         return expr1_type
 
+    # Done
     def visit_read_node(self, node):
 
         line = node.line_number
-        expr_type_left = node.left_expression.accept(self)
         expr_type_right = node.right_expression.accept(self)
+        expr_type_left = node.left_expression.accept(self)
 
         if expr_type_left != "int":
             raise Exception("Expected int for left argument of read on line ", line, ", got ", expr_type_left)
 
         if expr_type_right != "int":
             raise Exception("Expected int for right argument of read on line ", line, ", got ", expr_type_right)
+        
+        self.output.append("read\n")
 
         return expr_type_left
 
@@ -395,6 +405,9 @@ class CodeGenerationVisitor(ASTVisitor):
 
     # Done
     def visit_if_node(self, node):
+
+        self.current_block_length = 0
+
         if self.current_function_name is not None:
             self.returns = False
 
@@ -433,15 +446,38 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def visit_while_node(self, node):
 
+        self.current_block_length = 0
+
         line = node.line_number
+
         condition_type = node.condition.accept(self)
+
+        print(self.current_block_length)
+
+        self.output.append("push #PC+4\n")  
+        self.output.append("cjmp\n") # Enter the loop
+        self.output.append("push #PC+00000000000000000\n") # Placeholder
+        index = len(self.output) - 1
+        self.output.append("jmp\n")  # Exit the loop
+
+        self.current_block_length += 4
 
         if condition_type != "bool":
             raise Exception("Invalid type for while condition on line ", line, ". Expected bool, got ", condition_type)
 
         node.block.accept(self)
 
+        self.output[index] = "push #PC+" + str(self.current_block_length) + "\n" # Jump to the condition
+
+        self.output.append("push #PC-" + str(self.current_block_length) + "\n") # Jump to the condition
+        self.output.append("jmp\n") # Jump to the condition
+
+        self.current_block_length = 0
+
+    # Done
     def visit_for_node(self, node):
+
+        self.current_block_length = 0
 
         line = node.line_number
 
@@ -450,18 +486,35 @@ class CodeGenerationVisitor(ASTVisitor):
 
             if start_type != "int":
                 raise Exception("Invalid initialization type for for loop on line ", line, ". Expected int, got ", start_type)
+        
+        self.current_block_length = 0
 
         condition_type = node.condition.accept(self)
+
+        self.output.append("push #PC+4\n")  
+        self.output.append("cjmp\n") # Enter the loop
+        self.output.append("push #PC+00000000000000000\n") # Placeholder
+        index = len(self.output) - 1
+        self.output.append("jmp\n")  # Exit the loop
+
+        self.current_block_length += 4
 
         if condition_type != "bool":
             raise Exception("Invalid condition type for for loop on line ", line, ". Expected bool, got ", condition_type)
 
+        node.block.accept(self) # Execute the for loop block
+
+        self.output[index] = "push #PC+" + str(self.current_block_length) + "\n" # Jump to the condition
+
         increment_type = node.increment.accept(self)
 
-        if increment_type != "int":
-            raise Exception("Invalid increment type for for loop on line ", line, ". Expected int, got ", increment_type)
+        self.output.append("push #PC-" + str(self.current_block_length) + "\n") # Jump to the condition
+        self.output.append("jmp\n") # Jump to the condition
 
-        node.block.accept(self)
+        if increment_type != "int": # Evaluate the expression
+            raise Exception("Invalid increment type for for loop on line ", line, ". Expected int, got ", increment_type)
+        
+        self.current_block_length = 0
 
     def visit_return_node(self, node):
 
@@ -480,7 +533,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         return expr_type
 
-src_program = "let x:int = 2; x = 3; __print x;"
+src_program = "for (let i:int = 0; i < 10; i = i + 1) { __print i; __delay 100;}"
 parser = Parser(src_program)
 parser.Parse()
 parser.ASTroot.accept(CodeGenerationVisitor(output_file="output.txt"))
