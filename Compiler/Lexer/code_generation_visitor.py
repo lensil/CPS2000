@@ -158,6 +158,12 @@ class CodeGenerationVisitor(ASTVisitor):
 
         expression_type = node.expression.accept(self)
 
+        symbol = self.symbol_table.lookup(node.identifier.var_name, self.symbol_table.get_current_scope_type)
+
+        self.output.append("push "+ str(symbol.frame_index) + "\n")
+        self.output.append("push "+ str(self.symbol_table.current_frame_level - symbol.frame_level) + "\n")
+        self.output.append("st\n")
+
         if identifier_type != expression_type:
             raise Exception("Type mismatch in assignment on line ", node.line_number, ". Expected ", identifier_type, ", got ", expression_type)
 
@@ -179,7 +185,7 @@ class CodeGenerationVisitor(ASTVisitor):
         if var_type is None:
             raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
         symbol = self.symbol_table.lookup(node.var_name, self.symbol_table.get_current_scope_type)
-        self.output_file.write("push [" + str(symbol.frame_index) + ":" + str(self.symbol_table.current_frame_level - symbol.frame_level) + "]\n")
+        self.output.append("push [" + str(symbol.frame_index) + ":" + str(self.symbol_table.current_frame_level - symbol.frame_level) + "]\n")
         return var_type
 
     # Done
@@ -474,7 +480,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         return expr_type
 
-src_program = "if (true) { __print 1; } __print 3;"
+src_program = "let x:int = 2; x = 3; __print x;"
 parser = Parser(src_program)
 parser.Parse()
 parser.ASTroot.accept(CodeGenerationVisitor(output_file="output.txt"))
