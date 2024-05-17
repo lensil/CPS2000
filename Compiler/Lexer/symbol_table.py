@@ -44,6 +44,20 @@ class Symbol:
         self.type = type # The type of the variable/return type of the function
         self.frame_index = None  # Keeps track of the index of the variable in the frame
         self.frame_level = None  # Keeps track of the level of the frame
+        self.function_line = None  # The line number of the function definition
+
+    def add_function_line(self, line):
+        
+        """
+    
+            Adds the line number of the function definition.
+    
+            Parameters:
+                line: The line number of the function definition.
+    
+        """
+
+        self.function_line = line
 
 class SymbolTable:
     
@@ -52,6 +66,7 @@ class SymbolTable:
         A symbol table represnted as a stack of scopes. Each scope is a dictionary that maps variable names to their attributes.
     
     """
+    
     def __init__(self):
         self.scopes = []
         self.scope_types = []
@@ -86,12 +101,12 @@ class SymbolTable:
             Pops the top scope off the stack.
 
         """
+        
+        if self.get_current_scope_type() != ScopeType.GLOBAL:  # Don't decrement frame level for global scope
+            self.current_frame_level -= 1
 
         self.scopes.pop()
         self.scope_types.pop()
-
-        if self.get_current_scope_type() != ScopeType.GLOBAL:  # Don't decrement frame level for global scope
-            self.current_frame_level -= 1
 
     def add_symbol(self, name, symbol):
 
@@ -303,6 +318,7 @@ class SymbolTable:
         return symbol.frame_index, symbol.frame_level
     
     def assign_memory_location(self, symbol):
+        
         """
         
             Assigns a memory location to a variable.

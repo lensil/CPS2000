@@ -327,11 +327,18 @@ class CodeGenerationVisitor(ASTVisitor):
 
         return expr_type_left
 
+    # Fix frame issue when calling a function
     def visit_function_call_node(self, node):
 
         function_name = node.function_name 
         line = node.line_number
         parameters = node.parameters
+
+        self.current_block_length += 3
+
+        #self.output.append("push " + (str(len(node.parameters)))+ "\n") 
+        self.output.append("push ." + function_name + "\n")
+        self.output.append("call\n")
 
         if not self.symbol_table.is_declared(function_name):
             raise Exception("Function not declared on line ", line, ": ", function_name)
@@ -348,7 +355,15 @@ class CodeGenerationVisitor(ASTVisitor):
 
         return function_symbol.type
 
+    # To do: add parameters??
+    # To do: check if line number is needed
     def visit_function_node(self, node):
+
+        self.current_block_length = 0
+
+        self.output.append("push #PC+00000000000000000\n") # Placeholder
+        index = len(self.output) - 1
+        self.output.append("jmp\n")
 
         name = node.func_name.value
         func_parameters = []
@@ -358,6 +373,12 @@ class CodeGenerationVisitor(ASTVisitor):
             if (parameter["name"], parameter["type"]) in func_parameters:
                 raise Exception("Duplicate parameter in function declaration on line ", node.line_number, ": ", parameter["name"])
             func_parameters.append(parameter)
+
+        self.output.append("." + name + "\n") # Function name
+
+        self.current_block_length += 1
+
+        function_index = len(self.output) - 1 # Index/line of the function in the output list
 
         return_type = node.return_type.value
 
@@ -369,6 +390,8 @@ class CodeGenerationVisitor(ASTVisitor):
 
         symbol = Symbol(SymbolType.FUNCTION, node.line_number, return_type, name, func_parameters)
 
+        symbol.add_function_line(function_index) # Add the line where the function is declared
+
         self.symbol_table.add_symbol(name, symbol)
 
         self.symbol_table.push_scope(ScopeType.FUNCTION)
@@ -377,6 +400,10 @@ class CodeGenerationVisitor(ASTVisitor):
 
         if not self.returns:
             raise Exception("Function does not return a value on line ", node.line_number, ": ", name)
+        
+        self.returns = False # Reset the returns flag
+
+        self.output[index] = "push #PC+" + str(self.current_block_length+1) + "\n"
 
         self.current_function_name = None
         self.symbol_table.pop_scope()
@@ -444,6 +471,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         return condition_type
 
+    # Done
     def visit_while_node(self, node):
 
         self.current_block_length = 0
@@ -518,8 +546,11 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def visit_return_node(self, node):
 
+        self.current_block_length += 1
+
         line = node.line_number
         expr_type = node.expression.accept(self)
+        self.output.append("ret\n")
 
         if not self.symbol_table.is_function_scope():
             raise Exception("Return statement outside of function on line ", line)
@@ -533,7 +564,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         return expr_type
 
-src_program = "for (let i:int = 0; i < 10; i = i + 1) { __print i; __delay 100;}"
+src_program = "let x:int = 0; __print x; fun test() -> int { __print 2; return 5; }__print x; x = test(); __print x;"
 parser = Parser(src_program)
 parser.Parse()
 parser.ASTroot.accept(CodeGenerationVisitor(output_file="output.txt"))
