@@ -1,7 +1,7 @@
 from visitor import ASTVisitor
 from symbol_table import SymbolTable, ScopeType, Symbol, SymbolType
 from parser_testing import *
-
+from astnodes import *
 # To do: increase size of frame if needed
 
 class CodeGenerationVisitor(ASTVisitor):
@@ -40,6 +40,18 @@ class CodeGenerationVisitor(ASTVisitor):
 
         for statement in node.statements:
             statement.accept(self)
+
+        # check that the last statement is a return statement if the block is a function
+        if self.symbol_table.is_function_scope():
+            if isinstance(node.statements[-1], ASTIfNode):
+                if not isinstance(node.statements[-1].true_block.statements[-1], ASTReturnNode):
+                    raise Exception("Function does not end with a return a value on line ", node.line_number, ": ", self.current_function_name)
+                if not node.statements[-1].false_block is None:
+                    if not isinstance(node.statements[-1].false_block.statements[-1], ASTReturnNode):
+                        raise Exception("Function does not end with a return a value on line ", node.line_number, ": ", self.current_function_name)
+            elif not isinstance(node.statements[-1], ASTReturnNode):
+                raise Exception("Function does not end with a return a value on line ", node.line_number, ": ", self.current_function_name)
+
 
         if not self.symbol_table.is_function_scope():
             self.symbol_table.pop_scope()
@@ -328,6 +340,8 @@ class CodeGenerationVisitor(ASTVisitor):
         return expr_type_left
 
     # Fix frame issue when calling a function
+    # cframe before ret???
+    # Move function decleration to the end??
     def visit_function_call_node(self, node):
 
         function_name = node.function_name 
@@ -376,7 +390,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         self.output.append("." + name + "\n") # Function name
 
-        self.current_block_length += 1
+        self.current_block_length += 3
 
         function_index = len(self.output) - 1 # Index/line of the function in the output list
 
@@ -403,7 +417,15 @@ class CodeGenerationVisitor(ASTVisitor):
         
         self.returns = False # Reset the returns flag
 
-        self.output[index] = "push #PC+" + str(self.current_block_length+1) + "\n"
+        self.output[index] = "push #PC+" + str(self.current_block_length) + "\n"
+
+        # Swap return statement and cframe
+        return_statement = self.output[len(self.output) - 1]
+        cframe = self.output[len(self.output) - 2]
+        self.output[len(self.output) - 1] = cframe
+        self.output[len(self.output) - 2] = return_statement
+
+        self.current_block_length = 0
 
         self.current_function_name = None
         self.symbol_table.pop_scope()
@@ -564,7 +586,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         return expr_type
 
-src_program = "let x:int = 0; __print x; fun test() -> int { __print 2; return 5; }__print x; x = test(); __print x;"
+src_program = "let x:int = 0; __print x; fun test() -> int { if (false) {return 5;} else {return 7;}} __print x; x = test(); __print x; __print 5;"
 parser = Parser(src_program)
 parser.Parse()
 parser.ASTroot.accept(CodeGenerationVisitor(output_file="output.txt"))
