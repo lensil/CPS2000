@@ -202,7 +202,7 @@ class CodeGenerationVisitor(ASTVisitor):
                     return param["type"]
                 else:
                     raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
-            if self.symbol_table.lookup(node.var_name, self.symbol_table.get_current_scope_type) is None:
+            if self.symbol_table.lookup(node.var_name, self.symbol_table.get_current_scope_type()) is None:
                 raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
             frame_index, frame_level = self.symbol_table.get_location(node.var_name)
             self.output.append("push [" + str(frame_index) + ":" + str(frame_level) + "]\n")
@@ -215,7 +215,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         if var_type is None:
             raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
-        symbol = self.symbol_table.lookup(node.var_name, self.symbol_table.get_current_scope_type)
+        symbol = self.symbol_table.lookup(node.var_name, self.symbol_table.get_current_scope_type())
         self.output.append("push [" + str(symbol.frame_index) + ":" + str(self.symbol_table.current_frame_level - symbol.frame_level) + "]\n")
         return var_type
 
@@ -236,6 +236,8 @@ class CodeGenerationVisitor(ASTVisitor):
                 self.output.append("push " + str(self.symbol_table.current_frame_index) + "\n")
                 self.output.append("push " + str(0)  + "\n")
                 self.output.append("st\n")
+                symbol = Symbol(SymbolType.VARIABLE, line, type, name)
+                self.symbol_table.add_symbol(name, symbol)
                 self.current_block_length += 3
                 return type
             else:
