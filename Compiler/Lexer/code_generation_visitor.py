@@ -32,38 +32,25 @@ class CodeGenerationVisitor(ASTVisitor):
     
     # Done
     def visit_block_node(self, node):
+ 
         self.output.append("push " + str(len(node.statements)) + "\n") # Push the number of statements onto the stack
         self.output.append("oframe\n") # Open the frame
-        
-        if not self.symbol_table.is_function_scope():
-            self.symbol_table.push_scope(ScopeType.BLOCK) 
+
+        self.current_block_length += 2
+    
+        self.symbol_table.push_scope(ScopeType.BLOCK) 
+
 
         for statement in node.statements:
-            statement.accept(self)
-
-        # check that the last statement is a return statement if the block is a function
-        if self.symbol_table.is_function_scope():
-            if isinstance(node.statements[-1], ASTIfNode):
-                if not isinstance(node.statements[-1].true_block.statements[-1], ASTReturnNode):
-                    raise Exception("Function does not end with a return a value on line ", node.line_number, ": ", self.current_function_name)
-                if not node.statements[-1].false_block is None:
-                    if not isinstance(node.statements[-1].false_block.statements[-1], ASTReturnNode):
-                        raise Exception("Function does not end with a return a value on line ", node.line_number, ": ", self.current_function_name)
-                    self.output.append("ret\n") # Add return statement to the end of the function
-                    self.current_block_length += 5
-                else:
-                    raise Exception("Function does not end with a return a value on line ", node.line_number, ": ", self.current_function_name)
-            elif not isinstance(node.statements[-1], ASTReturnNode):
-                raise Exception("Function does not end with a return a value on line ", node.line_number, ": ", self.current_function_name)
-            elif isinstance(node.statements[-1], ASTReturnNode) and len(node.statements) > 1:
-                if isinstance(node.statements[-2], ASTIfNode):
-                    self.current_block_length += 3
+            statement.accept(self)          
 
         if not self.symbol_table.is_function_scope():
             self.symbol_table.pop_scope()
+        else:
+            self.symbol_table.current_frame_level -= 1
 
         self.output.append("cframe\n") # Close the frame
-        self.current_block_length += 3
+        self.current_block_length += 1
 
     # Done
     def visit_literal_node(self, node):
@@ -204,8 +191,8 @@ class CodeGenerationVisitor(ASTVisitor):
                     raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
             if self.symbol_table.lookup(node.var_name, self.symbol_table.get_current_scope_type()) is None:
                 raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
-            frame_index, frame_level = self.symbol_table.get_location(node.var_name)
-            self.output.append("push [" + str(frame_index) + ":" + str(frame_level) + "]\n")
+            symbol = self.symbol_table.lookup(node.var_name, self.symbol_table.get_current_scope_type())
+            self.output.append("push [" + str(symbol.frame_index) + ":" + str(self.symbol_table.current_frame_level - symbol.frame_level) + "]\n")
             self.current_block_length += 1
             return self.symbol_table.get_type(node.var_name)
 
@@ -226,22 +213,22 @@ class CodeGenerationVisitor(ASTVisitor):
         line = node.line_number
         type = node.var_type.value
         expr_type = node.var_expression.accept(self)
-
         if self.current_function_name is not None:
             parameters = self.symbol_table.get_params(self.current_function_name)
             for param in parameters:
                 if param["name"] == name:
                     raise Exception("Variable name clashes with parameter name on line ", line, ": ", name)
-            if self.symbol_table.lookup(name, self.symbol_table.get_current_scope_type) is not None:
+            symbol = self.symbol_table.lookup(name, self.symbol_table.get_current_scope_type())
+            if self.symbol_table.lookup(name, self.symbol_table.get_current_scope_type()) is None:
                 self.output.append("push " + str(self.symbol_table.current_frame_index) + "\n")
                 self.output.append("push " + str(0)  + "\n")
                 self.output.append("st\n")
-                symbol = Symbol(SymbolType.VARIABLE, line, type, name)
+                symbol = Symbol(SymbolType.VARIABLE, line, type, name, self.symbol_table.current_frame_index, self.symbol_table.current_frame_level)
                 self.symbol_table.add_symbol(name, symbol)
                 self.current_block_length += 3
                 return type
             else:
-                raise Exception("Undeclared identifier on line ", line, ": ", name)
+                raise Exception("Identifier already declared on line ", line, ": ", name)
 
         self.output.append("push " + str(self.symbol_table.current_frame_index ) + "\n")
         self.output.append("push " + str(0) + "\n")
@@ -410,7 +397,6 @@ class CodeGenerationVisitor(ASTVisitor):
         self.output.append("." + name + "\n") # Function name
 
         self.current_block_length += 3
-
         function_index = len(self.output) - 1 # Index/line of the function in the output list
 
         return_type = node.return_type.value
@@ -434,6 +420,22 @@ class CodeGenerationVisitor(ASTVisitor):
         if not self.returns:
             raise Exception("Function does not return a value on line ", node.line_number, ": ", name)
         
+        if isinstance(node.body.statements[-1], ASTIfNode):
+                if not isinstance(node.body.statements[-1].true_block.statements[-1], ASTReturnNode):
+                    raise Exception("Function does not end with a return a value on line ", node.line_number, ": ", self.current_function_name)
+                if not node.body.statements[-1].false_block is None:
+                    if not isinstance(node.body.statements[-1].false_block.statements[-1], ASTReturnNode):
+                        raise Exception("Function does not end with a return a value on line ", node.line_number, ": ", self.current_function_name)
+                    self.output.append("ret\n") # Add return statement to the end of the function
+                    self.current_block_length += 5
+                else:
+                    raise Exception("Function does not end with a return a value on line ", node.line_number, ": ", self.current_function_name)
+        elif not isinstance(node.body.statements[-1], ASTReturnNode):
+                raise Exception("Function does not end with a return a value on line ", node.line_number, ": ", self.current_function_name)
+        elif isinstance(node.body.statements[-1], ASTReturnNode) and len(node.body.statements) > 1:
+                if isinstance(node.body.statements[-2], ASTIfNode):
+                    self.current_block_length += 0
+        
         self.returns = False # Reset the returns flag
 
         self.output[index] = "push #PC+" + str(self.current_block_length) + "\n"
@@ -444,7 +446,7 @@ class CodeGenerationVisitor(ASTVisitor):
         self.output[len(self.output) - 1] = cframe
         self.output[len(self.output) - 2] = return_statement
 
-        self.current_block_length = 0
+
 
         self.current_function_name = None
         self.symbol_table.pop_scope()
@@ -474,6 +476,8 @@ class CodeGenerationVisitor(ASTVisitor):
     # Done
     def visit_if_node(self, node):
 
+        block_length_before = self.current_block_length
+
         self.current_block_length = 0
 
         if self.current_function_name is not None:
@@ -497,9 +501,6 @@ class CodeGenerationVisitor(ASTVisitor):
         
         node.true_block.accept(self)
 
-        if self.current_function_name is not None and not self.returns: 
-            raise Exception("Function does not return a value on line ", line, ": ", self.current_function_name)
-        
         self.output[index] = "push #PC+" + str(self.current_block_length-3) + "\n" # Jump to the end of the if block
 
         if not node.false_block is None:
@@ -508,11 +509,14 @@ class CodeGenerationVisitor(ASTVisitor):
             self.output.append("push #PC+00000000000000000\n") # Placeholder
             index = len(self.output) - 1
             self.output.append("jmp\n")  # Exit the if block
-            self.current_block_length += 1
+            self.current_block_length += 2
             if self.current_function_name is not None:
                 self.returns = False
             node.false_block.accept(self)
             self.output[index] = "push #PC+" + str(self.current_block_length-block_length) + "\n" # Jump to the end of the else block
+
+        if self.current_function_name is not None:
+            self.current_block_length += block_length_before
 
         return condition_type
 
@@ -524,8 +528,6 @@ class CodeGenerationVisitor(ASTVisitor):
         line = node.line_number
 
         condition_type = node.condition.accept(self)
-
-        print(self.current_block_length)
 
         self.output.append("push #PC+4\n")  
         self.output.append("cjmp\n") # Enter the loop
@@ -610,8 +612,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         return expr_type
 
-src_program = "let x:int = 5; fun test() -> int { let x:int = 0; return x; } __print x; x = test(); __print x;"
+src_program = "let x:int = 0; fun test(x: int) -> int { __print x; return x+2; } __print x; x = test(5); __print x;"
 parser = Parser(src_program)
 parser.Parse()
 parser.ASTroot.accept(CodeGenerationVisitor(output_file="output.txt"))
-print("Semantic analysis passed successfully!")
