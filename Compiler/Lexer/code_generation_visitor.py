@@ -186,15 +186,16 @@ class CodeGenerationVisitor(ASTVisitor):
             parameters = self.symbol_table.get_params(self.current_function_name)
             for param in parameters:
                 if param["name"] == node.var_name:
-                    return param["type"]
-                else:
-                    raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
+                    type = param["type"]
+                #else:
+                    #raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
             if self.symbol_table.lookup(node.var_name, self.symbol_table.get_current_scope_type()) is None:
                 raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
             symbol = self.symbol_table.lookup(node.var_name, self.symbol_table.get_current_scope_type())
             self.output.append("push [" + str(symbol.frame_index) + ":" + str(self.symbol_table.current_frame_level - symbol.frame_level) + "]\n")
             self.current_block_length += 1
-            return self.symbol_table.get_type(node.var_name)
+            type = self.symbol_table.get_type(node.var_name)
+            return type
 
         var_type = self.symbol_table.get_type(node.var_name)
 
@@ -357,10 +358,6 @@ class CodeGenerationVisitor(ASTVisitor):
 
         self.current_block_length += 3
 
-        #self.output.append("push " + (str(len(node.parameters)))+ "\n") 
-        self.output.append("push ." + function_name + "\n")
-        self.output.append("call\n")
-
         if not self.symbol_table.is_declared(function_name):
             raise Exception("Function not declared on line ", line, ": ", function_name)
 
@@ -372,8 +369,11 @@ class CodeGenerationVisitor(ASTVisitor):
         for i in range(len(parameters)):
             param_type = parameters[i].accept(self)
             if param_type != function_symbol.params[i]["type"]:
-                raise Exception("Type mismatch in function call on line ", line, ". Expected ", function_symbol.params[i]["type"], ", got ", param_type)
+               raise Exception("Type mismatch in function call on line ", line, ". Expected ", function_symbol.params[i]["type"], ", got ", param_type)
 
+        self.output.append("push " + (str(len(node.parameters)))+ "\n") 
+        self.output.append("push ." + function_name + "\n")
+        self.output.append("call\n")
         return function_symbol.type
 
     # Done
@@ -392,6 +392,7 @@ class CodeGenerationVisitor(ASTVisitor):
             parameter = param.accept(self)
             if (parameter["name"], parameter["type"]) in func_parameters:
                 raise Exception("Duplicate parameter in function declaration on line ", node.line_number, ": ", parameter["name"])
+            symbol = Symbol(SymbolType.VARIABLE, node.line_number, parameter["type"], parameter["name"])
             func_parameters.append(parameter)
 
         self.output.append("." + name + "\n") # Function name
@@ -415,7 +416,11 @@ class CodeGenerationVisitor(ASTVisitor):
 
         self.symbol_table.push_scope(ScopeType.FUNCTION)
         self.current_function_name = name
+        for i, param in enumerate(func_parameters):
+            symbol = Symbol(SymbolType.VARIABLE, node.line_number, param['type'], param['name'], i, self.symbol_table.current_frame_level)
+            self.symbol_table.add_symbol(param['name'], symbol)
         node.body.accept(self)
+
 
         if not self.returns:
             raise Exception("Function does not return a value on line ", node.line_number, ": ", name)
@@ -445,8 +450,6 @@ class CodeGenerationVisitor(ASTVisitor):
         cframe = self.output[len(self.output) - 2]
         self.output[len(self.output) - 1] = cframe
         self.output[len(self.output) - 2] = return_statement
-
-
 
         self.current_function_name = None
         self.symbol_table.pop_scope()
@@ -612,7 +615,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         return expr_type
 
-src_program = "let x:int = 0; fun test(x: int) -> int { __print x; return x+2; } __print x; x = test(5); __print x;"
+src_program = "let x:int = 0; fun test(x: int, y:int) -> int { __print x; __print y; return x+y; } __print x; x = test(5, 2); __print x;"
 parser = Parser(src_program)
 parser.Parse()
 parser.ASTroot.accept(CodeGenerationVisitor(output_file="output.txt"))
