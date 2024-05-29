@@ -27,7 +27,7 @@ class Parser:
         match self.crtToken.TokenType:
             case TokenType.LET:
                 return self.parse_variable_declartion()
-            case TokenType.IDENTIFIER if self.nextToken.TokenType == TokenType.ASSIGNMENT_OP:
+            case TokenType.IDENTIFIER if self.nextToken.TokenType == TokenType.ASSIGNMENT_OP or self.nextToken.TokenType == TokenType.LEFT_SQ_BRACK:
                 return self.parse_assignment_statement()
             case TokenType.PRINT:
                 return self.parse_print_statement()
@@ -66,7 +66,7 @@ class Parser:
 
         if self.crtToken.TokenType != TokenType.IDENTIFIER:
             raise Exception("Expected identifier after let on line ", var_name.line)
-        var_name = ast.ASTVariableNode(self.crtToken.value, line) # get the current token - should be the variable name
+        var_name = ast.ASTVariableNode(self.crtToken.value, None, line) # get the current token - should be the variable name
         self.advance() # increment the current token to the next token
 
         next_token = self.crtToken # get the current token - should be :
@@ -81,7 +81,10 @@ class Parser:
     
         self.advance() # increment the current token to the next token
     
-        next_token = self.crtToken  # get the current token - should be =
+        next_token = self.crtToken  # get the current token 
+        if next_token.TokenType == TokenType.LEFT_SQ_BRACK:
+            self.advance()
+            return self.parse_array_declaration(line, var_name, var_type)
         if next_token.TokenType != TokenType.ASSIGNMENT_OP:
             raise Exception("Expected '=' after variable type on line ", next_token.line)
         
@@ -96,15 +99,71 @@ class Parser:
         self.advance() # increment the current token to the next token - ; is skipped
 
         return ast.ASTVarDecNode(var_name, var_type, var_expression, line) # return the variable declaration node
+    
+    def parse_array_declaration(self, line, name, type):
+
+        """
+    
+        Parse an array declaration
+
+        Parameters:
+            line (int): The line number
+            name (str): The name of the array
+            type (TokenType): The type of the array
+
+        Returns:
+            ASTArrayDecNode: An array declaration node
+
+        """
+
+        array_length = None
+
+        if self.crtToken.TokenType == TokenType.INT_LITERAL:
+            array_length = self.crtToken.value
+            self.advance()
+
+        if self.crtToken.TokenType != TokenType.RIGHT_SQ_BRACK: 
+            raise Exception("Expected ']' after '[' on line ", self.crtToken.line)
+        
+        self.advance()
+        
+        if self.crtToken.TokenType != TokenType.ASSIGNMENT_OP:
+            raise Exception("Expected '=' after ']' on line ", self.crtToken.line)
+        
+        self.advance() # increment the current token to the next token - = is skipped
+
+        arary_elements = []
+
+        if self.crtToken.TokenType != TokenType.LEFT_SQ_BRACK:
+            raise Exception("Expected '[' after '=' on line ", self.crtToken.line)
+
+        while self.crtToken.TokenType != TokenType.RIGHT_SQ_BRACK:
+            self.advance()
+            arary_elements.append(ast.ASTLiteralNode(self.crtToken.TokenType, self.crtToken.value, self.crtToken.line))
+            self.advance()
+            if self.crtToken.TokenType != TokenType.COMMA and self.crtToken.TokenType != TokenType.RIGHT_SQ_BRACK:
+                raise Exception("Expected ',' or ']' on line ", self.crtToken.line)
+        
+        if self.crtToken.TokenType != TokenType.RIGHT_SQ_BRACK:
+            raise Exception("Expected ']' on line ", self.crtToken.line)
+
+        self.advance()
+
+        if self.crtToken.TokenType != TokenType.SEMICOLON:
+            raise Exception("Expected ';' on line ", self.crtToken.line)
+        
+        self.advance()
+
+        return ast.ASTArrayDecNode(array_length, arary_elements, line, name, type)
 
     def parse_expression(self):
 
         """
         
-        Parse a simple expression
+        Parses an expression
 
         Returns:
-            ASTNode: A simple expression node
+            ASTNode: An expression node
         
         """
 
@@ -195,14 +254,27 @@ class Parser:
                 return self.parse_function_call()
             case TokenType.IDENTIFIER if self.nextToken.TokenType != TokenType.LEFT_PAREN:
                 identifier = self.crtToken.value
+                length = None
                 line = self.crtToken.line
                 self.advance() # Advance to the next token
-                return ast.ASTVariableNode(identifier, line)
+                if self.crtToken.TokenType == TokenType.LEFT_SQ_BRACK:
+                    self.advance()
+                    length = self.parse_expression()
+                    if self.crtToken.TokenType != TokenType.RIGHT_SQ_BRACK:
+                        raise Exception("Expected ']' after array index on line ", self.crtToken.line)
+                    self.advance()  
+                return ast.ASTVariableNode(identifier, length, line)
             case TokenType.NOT_OP :# TokenType.ADDITIVE_OP if self.crtToken.value == "-":
                 operator = self.crtToken.value
                 line = self.crtToken.line
                 self.advance()
                 return ast.ASTUnaryNode(operator, self.parse_expression(), line)
+            case TokenType.ADDITIVE_OP:
+                if self.crtToken.value == "-":
+                    operator = self.crtToken.value
+                    line = self.crtToken.line
+                    self.advance()
+                    return ast.ASTUnaryNode(operator, self.parse_expression(), line)
             case TokenType.RANDOM_INT:
                 line = self.crtToken.line
                 self.advance() # Advance to the next token - random int is skipped
@@ -296,9 +368,22 @@ class Parser:
 
         line = self.crtToken.line
 
-        identifier_node = ast.ASTVariableNode(self.crtToken.value, line) # Create a variable node
+        identifier = self.crtToken.value 
+
+        length = None
 
         self.advance() # Advance to the next token
+
+        if self.crtToken.TokenType == TokenType.LEFT_SQ_BRACK: # Check if variable is an array
+            self.advance() # Advance to the next token - left square bracket is skipped
+            length = self.parse_expression() # Parse the expression
+            if self.crtToken.TokenType != TokenType.RIGHT_SQ_BRACK: # Check if the next token is a right square bracket
+                raise Exception("Expected ']' after array index on line ", self.crtToken.line) # Raise an exception if the next token is not a right square bracket
+            self.advance() # Advance to the next token - right square bracket is skipped
+        
+        identifier_node = ast.ASTVariableNode(identifier, length, line) # Create an identifier node
+
+        #self.advance() # Advance to the next token
 
         if self.crtToken.TokenType != TokenType.ASSIGNMENT_OP: # Check if the next token is an assignment operator
             raise Exception("Expected '=' after variable name on line ", self.crtToken.line) # Raise an exception if the next token is not an assignment operator
@@ -743,7 +828,6 @@ class Parser:
         self.ASTroot = self.parse_program()
 
 # Test the parser
-src_program = "__write_box 0, 0, 10, 10, #FFC0CB;"
+src_program = "let x:float[] = [1, 2, 3];"
 parser = Parser(src_program)
 parser.Parse()
-print(parser.ASTroot)

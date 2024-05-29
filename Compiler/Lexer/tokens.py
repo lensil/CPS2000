@@ -153,7 +153,7 @@ def token_type_by_final_state(final_state, lexeme, line):
         case 12 if lexeme == "!=":
             return Token(TokenType.RELATIONAL_OP, lexeme, line)
         case 12 if lexeme == "==":
-            return Token(TokenType.EQUAL_OP, lexeme, line)
+            return Token(TokenType.RELATIONAL_OP, lexeme, line)
         case 12 if lexeme == ">=":
             return Token(TokenType.RELATIONAL_OP, lexeme, line)
         case 12 if lexeme == "<=":
@@ -234,4 +234,4 @@ def token_type_by_final_state(final_state, lexeme, line):
         case 27:
             return Token(TokenType.COLOR_LITERAL, lexeme, line)
         case _:
-            return Token(TokenType.ERROR, lexeme, line)
+            raise Exception("Invalid token: " + lexeme)

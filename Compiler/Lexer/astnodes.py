@@ -110,6 +110,55 @@ class ASTLiteralNode(ASTExpressionNode):
 
         return visitor.visit_literal_node(self)
 
+class ASTArrayDecNode(ASTExpressionNode):
+    
+    """
+    
+    Represents an array declaration node in the AST. It contains the type, name and size of the array.
+    
+    Parameters:
+        size (int): The size of the array.
+        array (list): The elements of the array.
+        line_number (int): The line number in the source code where the array declaration node is located.
+        name (str): The name of the array.
+        type (str): The type of the array.
+
+    """
+
+    def __init__(self, size, array, line_number, name, type):
+        self.name = "ASTArrayDecNode"
+        self.size = size
+        self.array = array
+        self.line = line_number
+        self.var_name = name
+        self.var_type = type
+
+    def accept(self, visitor):
+        
+        """
+        
+        Accepts a visitor and calls the visit_array_dec_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+        
+        """
+        
+        return visitor.visit_array_dec_node(self)
+
+    def accept(self, visitor):
+        
+        """
+        
+        Accepts a visitor and calls the visit_array_dec_node method on the visitor.
+    
+        Parameters:
+            visitor (ASTVisitor): The visitor to accept.
+        
+        """
+        
+        return visitor.visit_array_dec_node(self)
+
 class ASTVariableNode(ASTExpressionNode):
     
     """
@@ -118,13 +167,15 @@ class ASTVariableNode(ASTExpressionNode):
 
     Parameters:
         name (str): The name of the variable.
+        length (int): The length of the variable if it is an array.
         line_number (int): The line number in the source code where the variable node is located.
         
     """
 
-    def __init__(self, name, line_number):
+    def __init__(self, name, length, line_number):
         self.name = "ASTVariableNode"
         self.var_name = name
+        self.length = length
         self.line_number = line_number
 
     def accept (self, visitor):

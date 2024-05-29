@@ -1,8 +1,11 @@
 # This file contains the SemanticAnalysisVisitor class which is used to perform semantic analysis on the AST.
-
+# To do: parameters in functions?
+# To do: fix write_box methods
+# to do: fix function related stuff
 from visitor import ASTVisitor
 from symbol_table import SymbolTable, ScopeType, Symbol, SymbolType
 from parser_testing import *
+from astnodes import *
 
 class SemanticAnalysisVisitor(ASTVisitor):
 
@@ -44,9 +47,7 @@ class SemanticAnalysisVisitor(ASTVisitor):
                 
             """
 
-            if not self.symbol_table.is_function_scope():
-                # Push a new scope onto the symbol table
-                self.symbol_table.push_scope(ScopeType.BLOCK) 
+            self.symbol_table.push_scope(ScopeType.BLOCK) 
     
             # Visit each statement in the block
             for statement in node.statements:
@@ -76,6 +77,10 @@ class SemanticAnalysisVisitor(ASTVisitor):
             return "bool"
         elif node_type == TokenType.COLOR_LITERAL:
             return "color"
+        elif node_type == TokenType.WIDTH:
+            return "int"
+        elif node_type == TokenType.HEIGHT:
+            return "int"
         else:
             return None
 
@@ -104,28 +109,27 @@ class SemanticAnalysisVisitor(ASTVisitor):
                 raise Exception("Type mismatch in binary operation on line ", line, ". Expected ", left_type, ", got ", right_type)
             
             if operator in ['+', '-', '*', '/']:
-                if left_type != "int" and left_type != "float":
+                if left_type != "int" and left_type != "float" and left_type != "color" and left_type != "width" and left_type != "height":
                     raise Exception("Invalid type for arithmetic operation on line ", line, ". Expected int or float, got ", left_type)
-                return left_type
+                type = left_type
             
-            if not node.cast_expr is None:
-                return node.cast_expr
-
             if operator in ['<', '>', '<=', '>=']:
-                if left_type != "int" and left_type != "float":
+                if left_type != "int" and left_type != "float" and left_type != "color" and left_type != "width" and left_type != "height":
                     raise Exception("Invalid type for comparison operation on line ", line, ". Expected int or float, got ", left_type)
-                return "bool"
+                type = "bool"
             
             if operator in ['==', '!=']:
-                return "bool"
+                type = "bool"
             
             if operator in ['and', 'or']:
                 if left_type != "bool":
                     raise Exception("Invalid type for logical operation on line ", line, ". Expected bool, got ", left_type)
-                return "bool"
+                type = "bool"
             
+            if not node.cast_expr is None:
+                type = node.cast_expr
     
-            return left_type
+            return type
     
     def visit_unary_op_node(self, node):
          
@@ -144,10 +148,16 @@ class SemanticAnalysisVisitor(ASTVisitor):
         # Visit the child
         line = node.line_number
         expr_type = node.expression.accept(self)
-        
-        # Check if the type is compatible
-        if expr_type != "bool":
-            raise Exception("Invalid type for unary operation on line ", line)
+
+        if node.operand == "not":
+            if expr_type != "bool":
+                raise Exception("Invalid type for unary operation on line ", line)
+
+        elif node.operand == "-":
+            if expr_type != "float" and expr_type != "int":
+                raise Exception("Invalid type for unary operation on line ", line)
+            if not isinstance(node.expression, ASTLiteralNode):
+                raise Exception("Expected literal on line ", line)
         
         return expr_type
     
@@ -194,9 +204,14 @@ class SemanticAnalysisVisitor(ASTVisitor):
             parameters = self.symbol_table.get_params(self.current_function_name)
             for param in parameters:
                 if param["name"] == node.var_name:
-                    return param["type"]
-                else:
+                    type = param["type"]
+                elif self.symbol_table.lookup(node.var_name, self.symbol_table.get_current_scope_type()) is None:
                     raise Exception("Undeclared identifier on line ", node.line_number, ": ", node.var_name)
+            symbol = self.symbol_table.lookup(node.var_name, self.symbol_table.get_current_scope_type())
+            if symbol is None:
+                raise Exception("Undeclared variable ", node.var_name, " on line ",  node.line_number)
+            type = self.symbol_table.get_type(node.var_name)
+            return type
 
         var_type = self.symbol_table.get_type(node.var_name)
 
@@ -227,8 +242,14 @@ class SemanticAnalysisVisitor(ASTVisitor):
             for param in parameters:
                 if param["name"] == name:
                     raise Exception("Variable name clashes with parameter name on line ", line, ": ", name)
-                
-                
+            symbol = self.symbol_table.lookup(name, self.symbol_table.get_current_scope_type())
+            if self.symbol_table.lookup(name, self.symbol_table.get_current_scope_type()) is None:
+                symbol = Symbol(SymbolType.VARIABLE, line, type, name, self.symbol_table.current_frame_index, self.symbol_table.current_frame_level)
+                self.symbol_table.add_symbol(name, symbol)
+                return type
+            else:
+                raise Exception("Identifier already declared on line ", line, ": ", name)
+            
         if self.symbol_table.is_declared(name):
             raise Exception("Identifier already declared on line ", line, ": ", name)
         
@@ -239,6 +260,36 @@ class SemanticAnalysisVisitor(ASTVisitor):
 
         return type
 
+    def visit_array_dec_node(self, node):
+
+        name = node.var_name.var_name 
+        line = node.line
+
+        if self.symbol_table.is_declared(name):
+            raise Exception("Identifier already declared on line ", line, ": ", name)
+        
+        if self.current_function_name is not None:
+            parameters = self.symbol_table.get_params(self.current_function_name)
+            for param in parameters:
+                if param["name"] == name:
+                    raise Exception("Variable name clashes with parameter name on line ", line, ": ", name)
+        
+        
+        if node.size is not None and len(node.array) != int(node.size):
+            print("Expected array length", node.size, "but got", len(node.array))
+            raise Exception("Array length does not match the number of elements on line ", node.line)
+        type = node.var_type.value
+
+        for element in node.array:
+            element_type = element.accept(self)
+            if type != element_type:
+                raise Exception("Type mismatch in declaration on line ", line, ". Expected ", type, ", got ", element_type)
+
+        symbol = Symbol(SymbolType.VARIABLE, line, type, name)
+        self.symbol_table.add_symbol(name, symbol)
+
+        return type
+            
     def visit_random_node(self, node):
         
         """
@@ -335,6 +386,7 @@ class SemanticAnalysisVisitor(ASTVisitor):
         expr2_type = node.expression_2.accept(self)
         expr3_type = node.expression_3.accept(self)
         expr4_type = node.expression_4.accept(self)
+        expr5_type = node.expression_5.accept(self)
 
         if expr1_type != "int":
             raise Exception("Expected int for first argument of write_box on line ", line, ", got ", expr1_type)
@@ -345,8 +397,11 @@ class SemanticAnalysisVisitor(ASTVisitor):
         if expr3_type != "int":
             raise Exception("Expected int for third argument of write_box on line ", line, ", got ", expr3_type)
         
-        if expr4_type != "color":
-            raise Exception("Expected color for fourth argument of write_box on line ", line, ", got ", expr4_type)
+        if expr4_type != "int":
+            raise Exception("Expected int for fourth argument of write_box on line ", line, ", got ", expr4_type)
+        
+        if expr5_type != "color":
+            raise Exception("Expected color for fifth argument of write_box on line ", line, ", got ", expr5_type)
         
     def visit_read_node(self, node):
         
@@ -526,6 +581,8 @@ class SemanticAnalysisVisitor(ASTVisitor):
                 self.returns = False
             node.false_block.accept(self)
 
+        return condition_type
+
     def visit_while_node(self, node):
 
         """
@@ -612,7 +669,7 @@ class SemanticAnalysisVisitor(ASTVisitor):
        
 # Testing the semantic analysis visitor
 # Test the parser
-src_program = "for (let x: int = 0; x < 10; x = x + 1) { __delay 6; }"
+src_program = "let x:int[] = [1, 2, 3];"
 
 parser = Parser(src_program)
 parser.Parse()

@@ -67,7 +67,7 @@ class DFA:
         self.start_state = self.states.S_0
         self.final_states = [self.states.S_1, self.states.S_2, self.states.S_3, self.states.S_4, self.states.S_5, self.states.S_6, self.states.S_9, self.states.S_10, self.states.S_12, self.states.S_10, self.states.S_11, self.states.S_12,
                                  self.states.S_13, self.states.S_16, self.states.S_17, self.states.S_18, self.states.S_20, self.states.S_27]
-        self.current_state = self.states.S_0
+        #self.current_state = self.states.S_0
         
         # Define the transitions for the DFA as a dictionary
         self.transitions = {

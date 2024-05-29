@@ -15,6 +15,7 @@ class SymbolType(Enum):
     """
     VARIABLE = 1
     FUNCTION = 2
+    ARRAY = 3
 
 class ScopeType(Enum):
     
@@ -35,8 +36,8 @@ class Symbol:
         Represents a symbol in the symbol table. A symbol has a type, value, and parameters.
 
     """
-
-    def __init__(self, symbol_type, line, type=None, value=None, params=None):
+    
+    def __init__(self, symbol_type, line, type=None, value=None, params=None, frame_index=None, frame_level=None, function_line=None):
         self.symbol_type = symbol_type # The type of the sumbol (variable or function)
         self.value = value # The value of the symbol (if the symbol is a variable)
         self.params = params # The parameters of the function (if the symbol is a function)
@@ -73,7 +74,7 @@ class SymbolTable:
         self.push_scope(ScopeType.GLOBAL) # Push the global scope
         self.current_frame_level = 0
         self.current_frame_index = 0
-
+    
     def push_scope(self, scope_type):
 
         """
@@ -85,15 +86,20 @@ class SymbolTable:
 
         """
 
-        self.scopes.append({})
-        self.scope_types.append(scope_type)
+        if len(self.scopes) == 0:
+            self.scopes.append({})
+            self.scope_types.append(scope_type)
+        elif not self.is_function_scope():
+            self.scopes.append({})
+            self.scope_types.append(scope_type)
+
 
         # If the scope type is not global, increment the frame level and reset the frame index
         if scope_type != ScopeType.GLOBAL:  
             self.current_frame_level += 1
             self.current_frame_index = 0
 
-
+        
     def pop_scope(self):
 
         """
@@ -101,12 +107,17 @@ class SymbolTable:
             Pops the top scope off the stack.
 
         """
+
+        if not self.is_function_scope():
+            self.current_frame_index = 0
+
         
         if self.get_current_scope_type() != ScopeType.GLOBAL:  # Don't decrement frame level for global scope
             self.current_frame_level -= 1
 
         self.scopes.pop()
         self.scope_types.pop()
+
 
     def add_symbol(self, name, symbol):
 
@@ -131,11 +142,12 @@ class SymbolTable:
                 The symbol if it exists, None otherwise.
 
         """
+      
 
         # If the scope type is function, only look in the current scope
         if scope_type == ScopeType.FUNCTION:
-            if name in self.scopes[-2] and self.scopes[-2][name].symbol_type == SymbolType.FUNCTION:
-                return self.scopes[-2][name]
+            if name in self.scopes[-1]:
+                return self.scopes[-1][name]
             else: 
                 return None
         
@@ -239,7 +251,10 @@ class SymbolTable:
         
             """
         
-            symbol = self.lookup(name, ScopeType.FUNCTION)
+            if name in self.scopes[-2] and self.scopes[-2][name].symbol_type == SymbolType.FUNCTION:
+                symbol = self.scopes[-2][name]
+            else: 
+                symbol = None
             if symbol is not None:
                 return symbol.params
             return None
@@ -268,7 +283,7 @@ class SymbolTable:
     
         """
 
-        return len(self.scopes) - 1
+        return self.current_frame_level
     
     def get_curent_frame_index(self):
 
@@ -281,7 +296,7 @@ class SymbolTable:
     
         """
 
-        return len(self.scopes[-1])
+        return self.current_frame_index
     
     def set_location(self, name, frame_index, frame_level):
         
@@ -314,8 +329,21 @@ class SymbolTable:
     
         """
 
-        symbol = self.lookup(name)
-        return symbol.frame_index, symbol.frame_level
+        if self.is_function_scope():
+            if name in self.scopes[-1]:
+                return self.scopes[-1][name].frame_index, 0
+
+        # Check if symbol is in the current scope
+        if name in self.scopes[-1]:
+            return self.scopes[-1][name].frame_index, 0
+        else:
+            # Lookup the symbol
+            frame_level = 0 # The level of the frame
+            for scope in reversed(self.scopes):
+                if name in scope:
+                    return scope[name].frame_index, frame_level
+                frame_level += 1
+            return None, None
     
     def assign_memory_location(self, symbol):
         
@@ -331,3 +359,5 @@ class SymbolTable:
         symbol.frame_index = self.current_frame_index
         symbol.frame_level = self.current_frame_level
         self.current_frame_index += 1
+
+    

@@ -21,7 +21,7 @@ class ASTVisitor:
     def visit_unary_op_node(self, node):
         raise NotImplementedError()
     
-    def visit_range_node(self, node):
+    def visit_random_node(self, node):
         raise NotImplementedError()
 
     def visit_read_node(self, node):
@@ -34,6 +34,9 @@ class ASTVisitor:
         raise NotImplementedError()
     
     def visit_var_dec_node(self, node):
+        raise NotImplementedError()
+    
+    def visit_array_dec_node(self, node):
         raise NotImplementedError()
     
     def visit_return_node(self, node):
@@ -70,13 +73,4 @@ class ASTVisitor:
         raise NotImplementedError()
     
     def visit_for_node(self, node):
-        raise NotImplementedError()
-    
-    def reset(self):
-        raise NotImplementedError()
-    
-    def inc_tab_count(self):
-        raise NotImplementedError()
-    
-    def dec_tab_count(self):
         raise NotImplementedError()

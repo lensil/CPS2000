@@ -72,7 +72,7 @@ class Lexer:
 
         lexeme = "" # Initialize the lexeme to an empty string
         state = self.dfa.start_state # Set the state to the start state of the DFA
-        stack = [] # Initialize an empty stack
+        stack = [] # Initialize an empty stack 
         stack.append(-2) # Push -2 onto the stack
 
         while (state != None): # Loop while the state is not None i.e. while an invalid state has not been reached
@@ -148,7 +148,7 @@ class Lexer:
 # Test the Lexer
 if __name__ == "__main__":
     lexer = Lexer()
-    src_program_str = "__write_box 0, 0, 10, 10, #FFC0CB;"
+    src_program_str = "let x:int[] = [1, 2, 3];"
     tokens_list = lexer.generate_tokens(src_program_str)
     for token in tokens_list:
         print(token.TokenType, token.value, token.line)
