@@ -1,0 +1,44 @@
+.main
+push 4
+jmp
+halt
+push 2
+oframe
+push 0
+push 0
+push 0
+st
+push 100
+push [0:0]
+lt
+push #PC+4
+cjmp
+push #PC+29
+jmp
+push 4
+oframe
+push 9999999
+irnd
+push 0
+push 0
+st
+push [0:0]
+push 1
+push 0
+st
+push [1:0]
+height
+irnd
+width
+irnd
+write
+push [0:1]
+push 1
+push [0:1]
+add
+push 0
+push 1
+st
+cframe
+push #PC-32
+jmp

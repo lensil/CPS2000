@@ -65,8 +65,9 @@ class Parser:
         self.advance() # skip the let token
 
         if self.crtToken.TokenType != TokenType.IDENTIFIER:
-            raise Exception("Expected identifier after let on line ", var_name.line)
+            raise Exception("Expected identifier after let on line ", line)
         var_name = ast.ASTVariableNode(self.crtToken.value, None, line) # get the current token - should be the variable name
+        var_name.add_type(None)
         self.advance() # increment the current token to the next token
 
         next_token = self.crtToken # get the current token - should be :
@@ -139,7 +140,9 @@ class Parser:
 
         while self.crtToken.TokenType != TokenType.RIGHT_SQ_BRACK:
             self.advance()
-            arary_elements.append(ast.ASTLiteralNode(self.crtToken.TokenType, self.crtToken.value, self.crtToken.line))
+            node = ast.ASTLiteralNode(self.crtToken.TokenType, self.crtToken.value, self.crtToken.line)
+            node.add_type(None)
+            arary_elements.append(node)
             self.advance()
             if self.crtToken.TokenType != TokenType.COMMA and self.crtToken.TokenType != TokenType.RIGHT_SQ_BRACK:
                 raise Exception("Expected ',' or ']' on line ", self.crtToken.line)
@@ -249,7 +252,9 @@ class Parser:
                 value = self.crtToken.value
                 line = self.crtToken.line
                 self.advance() # Advance to the next token
-                return ast.ASTLiteralNode(type, value, line)
+                node = ast.ASTLiteralNode(type, value, line)
+                node.add_type(None)
+                return node
             case TokenType.IDENTIFIER if self.nextToken.TokenType == TokenType.LEFT_PAREN:
                 return self.parse_function_call()
             case TokenType.IDENTIFIER if self.nextToken.TokenType != TokenType.LEFT_PAREN:
@@ -263,7 +268,9 @@ class Parser:
                     if self.crtToken.TokenType != TokenType.RIGHT_SQ_BRACK:
                         raise Exception("Expected ']' after array index on line ", self.crtToken.line)
                     self.advance()  
-                return ast.ASTVariableNode(identifier, length, line)
+                node = ast.ASTVariableNode(identifier, length, line)
+                node.add_type(None)
+                return node
             case TokenType.NOT_OP :# TokenType.ADDITIVE_OP if self.crtToken.value == "-":
                 operator = self.crtToken.value
                 line = self.crtToken.line
@@ -321,7 +328,9 @@ class Parser:
         # Check for a closing parenthesis to see if there are any parameters
         if self.crtToken.TokenType == TokenType.RIGHT_PAREN: # Check if the next token is a right parenthesis
             self.advance() # Advance to the next token as the right parenthesis is skipped
-            return ast.ASTFunctionCallNode(function_name, [], line) # Return the function call node with no parameters
+            node = ast.ASTFunctionCallNode(function_name, [], line) # Return the function call node with no parameters
+            node.add_type(None)
+            return node
 
         parameters = self.parse_actual_parameters() # Get the parameters
 
@@ -382,7 +391,7 @@ class Parser:
             self.advance() # Advance to the next token - right square bracket is skipped
         
         identifier_node = ast.ASTVariableNode(identifier, length, line) # Create an identifier node
-
+        identifier_node.add_type(None)
         #self.advance() # Advance to the next token
 
         if self.crtToken.TokenType != TokenType.ASSIGNMENT_OP: # Check if the next token is an assignment operator
@@ -826,8 +835,3 @@ class Parser:
     
     def Parse(self):        
         self.ASTroot = self.parse_program()
-
-# Test the parser
-src_program = "let x:float[] = [1, 2, 3];"
-parser = Parser(src_program)
-parser.Parse()

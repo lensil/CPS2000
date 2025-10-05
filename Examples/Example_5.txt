@@ -1,0 +1,21 @@
+PArL Code:
+
+let x: colour = #123456;
+__write 1, 1, x;
+
+PArIR code:
+
+.main
+push 4
+jmp
+halt
+push 2
+oframe
+push #123456
+push 0
+push 0
+st
+push [0:0]
+push 1
+push 1
+write

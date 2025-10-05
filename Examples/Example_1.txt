@@ -1,0 +1,80 @@
+PArL Code:
+
+/* 
+Main function 
+*/
+fun factorial(n: int) -> int {
+    let result: int = 1;
+    for (let i: int = 1; i <= n; i = i + 1) {
+        result = result * i;
+    }
+    return result;
+}
+
+let number: int = 5; // Inline comment
+let fact: int = factorial(number);
+__print(fact); 
+
+PArIR code:
+
+.main
+push 4
+jmp
+halt
+push 4
+oframe
+push #PC+42
+jmp
+.factorial
+push 3
+oframe
+push 1
+push 0
+push 0
+st
+push 1
+push 1
+push 0
+st
+push [0:1]
+push [1:0]
+le
+push #PC+4
+cjmp
+push #PC+21
+jmp
+push 1
+oframe
+push [0:1]
+push [1:1]
+push [0:1]
+mul
+push 0
+push 1
+st
+cframe
+push [1:0]
+push 1
+push [1:0]
+add
+push 1
+push 0
+st
+push #PC-24
+jmp
+push [0:0]
+cframe
+ret
+push 3
+push 0
+push 0
+st
+push [0:0]
+push 1
+push .factorial
+call
+push 1
+push 0
+st
+push [1:0]
+print

@@ -1,0 +1,40 @@
+PArL Code:
+
+let i:int = 0;
+for (i < 10; i = i+1) {
+    __print i;
+}
+
+PArIR code:
+
+.main
+push 4
+jmp
+halt
+push 2
+oframe
+push 0
+push 0
+push 0
+st
+push 10
+push [0:0]
+lt
+push #PC+4
+cjmp
+push #PC+16
+jmp
+push 1
+oframe
+push [0:1]
+print
+cframe
+push [0:0]
+push 1
+push [0:0]
+add
+push 0
+push 0
+st
+push #PC-19
+jmp

@@ -1,0 +1,7 @@
+let i: int = 0;
+while (i < 100) {
+    let x: int = __random_int 9999999;
+    let y: colour = x as colour;
+    __write __random_int __width, __random_int __height, y;
+    i = i + 1;
+}

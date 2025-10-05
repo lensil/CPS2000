@@ -1,0 +1,49 @@
+PArL Code:
+
+fun MoreThan50(x: int, u) -> bool {
+    if (x <= 50) {
+        return false;
+    }
+    return true;
+}
+
+let x: int = 45;
+__print MoreThan50(x);
+
+PArIR code:
+
+.main
+push 4
+jmp
+halt
+push 3
+oframe
+push #PC+20
+jmp
+.MoreThan50
+push 2
+oframe
+push 50
+push [0:1]
+lt
+push #PC+4
+cjmp
+push #PC+7
+jmp
+push 1
+oframe
+push 0
+ret
+cframe
+push 1
+cframe
+ret
+push 90
+push 0
+push 0
+st
+push [0:0]
+push 1
+push .MoreThan50
+call
+print

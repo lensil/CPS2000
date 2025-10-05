@@ -148,7 +148,7 @@ class Lexer:
 # Test the Lexer
 if __name__ == "__main__":
     lexer = Lexer()
-    src_program_str = "let x:int[] = [1, 2, 3];"
+    src_program_str = "let x1:int[] = [1, 2, 3];"
     tokens_list = lexer.generate_tokens(src_program_str)
     for token in tokens_list:
         print(token.TokenType, token.value, token.line)
